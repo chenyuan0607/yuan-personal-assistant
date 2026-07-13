@@ -41,6 +41,7 @@ export function initPomodoro({ root = document, store, getDeviceName = () => "æˆ
   const timerView = root.querySelector("#pomodoro-view");
   const navigation = root.querySelector(".bottom-nav");
   const resultDialog = root.querySelector("#pomodoro-result-dialog");
+  resultDialog.addEventListener("cancel", (event) => event.preventDefault());
   let currentPlan = null;
   let tasks = [];
   let ticker = null;

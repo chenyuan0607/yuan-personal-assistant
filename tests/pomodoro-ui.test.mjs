@@ -11,3 +11,8 @@ test("service worker cache version changes with the pomodoro shell", async () =>
   const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
   assert.match(worker, /yuan-assistant-v7/);
 });
+
+test("result confirmation cannot be dismissed without choosing an outcome", async () => {
+  const source = await readFile(new URL("../js/pomodoro-ui.js", import.meta.url), "utf8");
+  assert.match(source, /resultDialog\.addEventListener\("cancel", \(event\) => event\.preventDefault\(\)\)/);
+});

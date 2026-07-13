@@ -190,3 +190,25 @@ test("feedback relay overwrites daily summaries and Codex acknowledges only afte
     delete globalThis.YUAN_ASSISTANT_KV;
   }
 });
+
+test("a late feedback update pulls the full date snapshot for report replacement", async () => {
+  const values = new Map([
+    ["feedback_owner_task_plan_2026_07_12_plan_2026_07_12", { id: "plan-2026-07-12", kind: "task-plan", date: "2026-07-12", status: "processed", createdAt: "2026-07-12T01:00:00Z", tasks: [] }],
+    ["feedback_owner_ledger_summary_2026_07_12_ledger_1", { id: "ledger-1", kind: "ledger-summary", date: "2026-07-12", status: "waiting", createdAt: "2026-07-14T01:00:00Z", deviceName: "手机A" }],
+    ["feedback_owner_task_plan_2026_07_11_plan_2026_07_11", { id: "plan-2026-07-11", kind: "task-plan", date: "2026-07-11", status: "processed", createdAt: "2026-07-11T01:00:00Z", tasks: [] }],
+  ]);
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { values.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return values.get(key) ?? null; },
+    async delete(key) { values.delete(key); },
+    async list({ prefix }) { return { complete: true, cursor: null, keys: [...values.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) }; },
+  };
+  const env = { SESSION_SECRET: "secret" };
+  const token = await issueToken({ sub: "owner", kind: "codex", exp: 9999999999 }, env.SESSION_SECRET);
+  try {
+    const body = await (await codexHandler({ env, request: new Request("https://app.example/api/codex?action=feedback-pull", { headers: { authorization: `Bearer ${token}` } }) })).json();
+    assert.deepEqual(body.items.map((item) => item.id).sort(), ["ledger-1", "plan-2026-07-12"]);
+  } finally {
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
