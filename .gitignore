@@ -3,3 +3,8 @@ mobile-viewport.png
 .superpowers/
 .worktrees/
 node_modules/
+.env
+.env.*
+!.env.example
+.assistant-secrets/
+.assistant-sync-state/
