@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#f7f7f5">
+  <title>缘的小助手</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">个人小助手</p><h1>缘的今天</h1></div>
+    <span class="privacy">账目仅存本机</span>
+  </header>
+
+  <main>
+    <section id="today-view" class="view" aria-labelledby="today-tab">
+      <div class="date-row"><span data-plan-date>--</span><span>更新于 <span data-plan-updated>--</span></span></div>
+      <p class="warning" data-plan-warning hidden>这是之前的计划，请留意日期。</p>
+      <section class="focus-panel"><p>今日焦点</p><h2 data-plan-focus>正在读取今日计划…</h2></section>
+      <p class="adjustment" data-plan-adjustment>请稍候</p>
+      <div class="task-groups">
+        <section class="task-group must" data-task-group="must"><h3>必须完成</h3><ul></ul></section>
+        <section class="task-group should" data-task-group="should"><h3>尽量完成</h3><ul></ul></section>
+        <section class="task-group optional" data-task-group="optional"><h3>有余力再做</h3><ul></ul></section>
+      </div>
+    </section>
+
+    <section id="ledger-view" class="view" aria-labelledby="ledger-tab" hidden>
+      <div class="ledger-heading"><div><p class="eyebrow">个人账本</p><h2>本月收支</h2></div><input id="month-filter" type="month" aria-label="选择月份"></div>
+      <div class="summary-grid">
+        <div><span>支出</span><strong class="expense" data-expense>¥0.00</strong></div>
+        <div><span>收入</span><strong class="income" data-income>¥0.00</strong></div>
+        <div><span>余额</span><strong data-balance>¥0.00</strong></div>
+      </div>
+      <div class="ledger-actions"><button id="export-button" class="secondary">导出备份</button><label class="secondary file-button">导入恢复<input id="import-input" type="file" accept="application/json" hidden></label></div>
+      <div class="records-heading"><h3>账目明细</h3><span data-record-count>0 笔</span></div>
+      <div id="record-list" class="record-list"><p class="empty">还没有账目，记下第一笔吧。</p></div>
+      <button id="add-record" class="add-button" aria-label="记一笔">＋</button>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="主要页面">
+    <button id="today-tab" class="active" data-view="today-view"><span aria-hidden="true">☀</span>今天</button>
+    <button id="ledger-tab" data-view="ledger-view"><span aria-hidden="true">¥</span>账本</button>
+  </nav>
+
+  <dialog id="record-dialog">
+    <form id="record-form" method="dialog">
+      <div class="dialog-head"><h2>记一笔</h2><button type="button" id="close-dialog" class="icon-button" aria-label="关闭">×</button></div>
+      <input id="record-id" type="hidden">
+      <fieldset class="segmented"><legend class="sr-only">收支类型</legend><label><input type="radio" name="type" value="expense" checked><span>支出</span></label><label><input type="radio" name="type" value="income"><span>收入</span></label></fieldset>
+      <label>金额（元）<input id="amount" inputmode="decimal" type="number" min="0.01" step="0.01" placeholder="0.00" required></label>
+      <label>分类<select id="category" required></select></label>
+      <label>日期<input id="record-date" type="date" required></label>
+      <label>备注（可选）<input id="note" maxlength="80" placeholder="写点说明"></label>
+      <div class="form-actions"><button id="delete-record" class="danger" type="button" hidden>删除</button><button class="primary" type="submit">保存账目</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
