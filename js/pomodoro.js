@@ -62,3 +62,14 @@ export function taskStatus(results, taskId) {
   const latest = [...results].reverse().find((item) => item.taskId === taskId);
   return latest?.outcome ?? "not-started";
 }
+
+export function buildTaskPlanFeedback({ date, tasks, updatedAt = new Date().toISOString() }) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Array.isArray(tasks)) throw new Error("任务清单无效");
+  return {
+    id: `plan-${date}`,
+    kind: "task-plan",
+    date,
+    tasks: tasks.map((task) => ({ taskId: task.id, title: task.title, plannedMinutes: task.minutes })),
+    updatedAt,
+  };
+}

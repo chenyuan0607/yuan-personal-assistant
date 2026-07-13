@@ -147,6 +147,17 @@ test("feedback validation rejects ledger details and uses stable owner keys", ()
   assert.equal(feedbackKey("owner", "ledger-summary", "2026-07-14", "ledger-1"), "feedback_owner_ledger_summary_2026_07_14_ledger_1");
 });
 
+test("task plan feedback keeps a bounded public task snapshot", () => {
+  const result = validateFeedback({
+    id: "plan-2026-07-14",
+    kind: "task-plan",
+    date: "2026-07-14",
+    tasks: [{ taskId: "t1", title: "整理资料", plannedMinutes: 15 }],
+    updatedAt: "2026-07-14T01:00:00Z",
+  });
+  assert.deepEqual(result.tasks, [{ taskId: "t1", title: "整理资料", plannedMinutes: 15 }]);
+});
+
 test("feedback relay overwrites daily summaries and Codex acknowledges only after pull", async () => {
   const data = new Map();
   globalThis.YUAN_ASSISTANT_KV = {

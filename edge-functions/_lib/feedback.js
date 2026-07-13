@@ -32,6 +32,20 @@ function validateCategories(value) {
 
 export function validateFeedback(value) {
   const kind = value?.kind;
+  if (kind === "task-plan") {
+    rejectUnexpected(value, new Set(["id", "kind", "date", "tasks", "updatedAt"]));
+    if (!datePattern.test(value.date || "")) throw new Error("任务清单日期无效");
+    if (!Array.isArray(value.tasks) || value.tasks.length > 30) throw new Error("任务清单无效");
+    const tasks = value.tasks.map((task) => {
+      rejectUnexpected(task, new Set(["taskId", "title", "plannedMinutes"]));
+      return {
+        taskId: text(task.taskId, "任务编号", 160),
+        title: text(task.title, "任务标题", 300),
+        plannedMinutes: integer(task.plannedMinutes, "建议分钟数", { minimum: 1, maximum: 1440 }),
+      };
+    });
+    return { id: text(value.id, "清单编号", 80), kind, date: value.date, tasks, updatedAt: isoDate(value.updatedAt, "清单时间") };
+  }
   if (kind === "task-result") {
     rejectUnexpected(value, new Set(["id", "kind", "taskId", "title", "date", "deviceName", "plannedMinutes", "focusedSeconds", "outcome", "completedAt"]));
     if (!datePattern.test(value.date || "")) throw new Error("反馈日期无效");

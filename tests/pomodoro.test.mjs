@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  buildTaskPlanFeedback,
   completeSession,
   createSession,
   formatClock,
@@ -73,4 +74,20 @@ test("clock and latest task status are deterministic", () => {
     { taskId: "t1", outcome: "completed" },
   ], "t1"), "completed");
   assert.equal(taskStatus([], "t1"), "not-started");
+});
+
+test("task plan feedback includes unstarted tasks without extra fields", () => {
+  const record = buildTaskPlanFeedback({
+    date: "2026-07-14",
+    tasks: [
+      { id: "t1", title: "整理资料", minutes: 15 },
+      { id: "t2", title: "学习", minutes: 25 },
+    ],
+    updatedAt: "2026-07-14T01:00:00Z",
+  });
+  assert.deepEqual(record.tasks, [
+    { taskId: "t1", title: "整理资料", plannedMinutes: 15 },
+    { taskId: "t2", title: "学习", plannedMinutes: 25 },
+  ]);
+  assert.equal(record.id, "plan-2026-07-14");
 });

@@ -1,4 +1,5 @@
 import {
+  buildTaskPlanFeedback,
   completeSession,
   createSession,
   formatClock,
@@ -162,6 +163,12 @@ export function initPomodoro({ root = document, store, getDeviceName = () => "æˆ
     bindPlan(plan) {
       currentPlan = plan;
       tasks = planTasks(plan);
+      const planFeedback = buildTaskPlanFeedback({ date: plan.date, tasks, updatedAt: plan.updatedAt });
+      const previous = store.results().find((item) => item.id === planFeedback.id);
+      if (JSON.stringify(previous) !== JSON.stringify(planFeedback)) {
+        store.addResult(planFeedback);
+        void onPending();
+      }
       renderProgress();
       if (store.session()) startTicker();
     },

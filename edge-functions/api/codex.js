@@ -30,8 +30,8 @@ export default async function onRequest({ request, env }) {
     }
     if (request.method === "GET" && action === "feedback-pull") {
       const date = new URL(request.url).searchParams.get("date");
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "")) throw new Error("反馈日期无效");
-      const items = (await listJson(feedbackPrefix(owner.sub), metadata)).filter((item) => item.status === "waiting" && item.date === date);
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("反馈日期无效");
+      const items = (await listJson(feedbackPrefix(owner.sub), metadata)).filter((item) => item.status === "waiting" && (!date || item.date === date));
       return json({ ok: true, items });
     }
     if (request.method !== "POST") return errorJson(new Error("方法不支持"), 405);
