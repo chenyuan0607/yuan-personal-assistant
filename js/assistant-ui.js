@@ -22,8 +22,7 @@ export async function flushPending(store, api) {
   }
 }
 
-export function initAssistant({ baseUrl, root = document }) {
-  const store = createBrowserStore();
+export function initAssistant({ baseUrl, root = document, store = createBrowserStore() }) {
   const api = createAssistantApi({ baseUrl, getToken: store.token });
   const dialog = root.querySelector("#assistant-login-dialog");
   const status = root.querySelector("#assistant-status");

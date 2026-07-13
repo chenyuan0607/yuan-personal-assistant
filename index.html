@@ -19,11 +19,29 @@
       <div class="date-row"><span data-plan-date>--</span><span>更新于 <span data-plan-updated>--</span></span></div>
       <p class="warning" data-plan-warning hidden>这是之前的计划，请留意日期。</p>
       <section class="focus-panel"><p>今日焦点</p><h2 data-plan-focus>正在读取今日计划…</h2></section>
+      <section class="today-progress" aria-labelledby="today-progress-title">
+        <div class="progress-heading"><h3 id="today-progress-title">今日进度</h3><strong data-task-percent>0%</strong></div>
+        <div class="task-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span data-task-progress></span></div>
+        <p><span data-task-count>已完成 0 / 0 项</span> · <span data-focus-minutes>今日专注 0 分钟</span></p>
+      </section>
       <p class="adjustment" data-plan-adjustment>请稍候</p>
       <div class="task-groups">
         <section class="task-group must" data-task-group="must"><h3>必须完成</h3><ul></ul></section>
         <section class="task-group should" data-task-group="should"><h3>尽量完成</h3><ul></ul></section>
         <section class="task-group optional" data-task-group="optional"><h3>有余力再做</h3><ul></ul></section>
+      </div>
+    </section>
+
+    <section id="pomodoro-view" class="view pomodoro-view" aria-labelledby="pomodoro-title" hidden>
+      <button id="pomodoro-back" class="text-button pomodoro-back" type="button">← 返回今日任务</button>
+      <p class="eyebrow">当前专注任务</p>
+      <h2 id="pomodoro-title" data-pomodoro-title>尚未选择任务</h2>
+      <p class="pomodoro-planned" data-pomodoro-planned>建议用时 -- 分钟</p>
+      <div class="pomodoro-clock" data-pomodoro-clock aria-live="polite">00:00</div>
+      <p class="pomodoro-state" data-pomodoro-state>准备开始</p>
+      <div class="pomodoro-actions">
+        <button id="pomodoro-toggle" class="primary" type="button">暂停</button>
+        <button id="pomodoro-stop" class="secondary" type="button">提前结束</button>
       </div>
     </section>
 
@@ -91,6 +109,7 @@
   <dialog id="budget-dialog"><form id="budget-form"><div class="dialog-head"><h2>设置月总预算</h2><button type="button" class="icon-button" data-close-dialog="budget-dialog" aria-label="关闭预算设置">×</button></div><label>预算金额（元）<input id="budget-amount" type="number" min="0" step="0.01" inputmode="decimal" required></label><button class="primary" type="submit">保存预算</button></form></dialog>
   <dialog id="category-dialog"><form id="category-form"><div class="dialog-head"><h2>管理支出分类</h2><button type="button" class="icon-button" data-close-dialog="category-dialog" aria-label="关闭分类管理">×</button></div><label>操作<select id="category-action"><option value="add">新增分类</option><option value="disable">停用自定义分类</option></select></label><label>分类名称<input id="category-name" maxlength="12" required></label><button class="primary" type="submit">保存分类</button></form></dialog>
   <dialog id="assistant-login-dialog"><form id="assistant-login-form"><div class="dialog-head"><h2>打开私人助手</h2></div><label>专属访问码<input id="assistant-access-code" type="password" autocomplete="current-password" required></label><label>这台设备的名称<input id="assistant-device-name" value="我的手机" maxlength="30" required></label><button class="primary" type="submit">进入助手</button></form></dialog>
+  <dialog id="pomodoro-result-dialog"><form method="dialog" class="pomodoro-result-form"><div class="dialog-head"><h2>本次专注结束</h2></div><p data-pomodoro-result-task></p><p data-pomodoro-result-time></p><div class="pomodoro-result-actions"><button class="secondary" type="submit" value="unfinished" data-pomodoro-outcome="unfinished">未完成</button><button class="primary" type="submit" value="completed" data-pomodoro-outcome="completed">已完成</button></div></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script type="module" src="./js/app.js"></script>
 </body>

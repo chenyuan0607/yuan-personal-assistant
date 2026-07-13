@@ -38,14 +38,27 @@ export function completeSession(session, { outcome, now = Date.now(), eventId, d
 }
 
 export function progressSummary(results, taskIds) {
+  const activeTaskIds = new Set(taskIds);
+  const activeResults = results.filter((item) => activeTaskIds.has(item.taskId));
   const latest = new Map();
-  for (const result of results) latest.set(result.taskId, result);
+  for (const result of activeResults) latest.set(result.taskId, result);
   const completed = taskIds.filter((id) => latest.get(id)?.outcome === "completed").length;
-  const focusedSeconds = results.reduce((sum, item) => sum + item.focusedSeconds, 0);
+  const focusedSeconds = activeResults.reduce((sum, item) => sum + item.focusedSeconds, 0);
   return {
     completed,
     total: taskIds.length,
     percent: taskIds.length ? Math.round(completed / taskIds.length * 100) : 0,
     focusedMinutes: Math.floor(focusedSeconds / 60),
   };
+}
+
+export function formatClock(milliseconds) {
+  const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
+  const minutes = Math.floor(seconds / 60);
+  return `${String(minutes).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+export function taskStatus(results, taskId) {
+  const latest = [...results].reverse().find((item) => item.taskId === taskId);
+  return latest?.outcome ?? "not-started";
 }

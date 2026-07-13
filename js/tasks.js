@@ -48,15 +48,29 @@ export function renderPlan(plan, root) {
     if (!safe.groups[name].length) section.hidden = true;
     else {
       section.hidden = false;
-      for (const item of safe.groups[name]) {
+      for (const [index, item] of safe.groups[name].entries()) {
         const li = document.createElement("li");
+        const id = taskId(safe.date, name, index, item.title);
+        li.dataset.taskId = id;
         const title = document.createElement("span");
+        title.className = "task-title";
         title.textContent = item.title;
         li.append(title);
         if (item.minutes) {
+          const actions = document.createElement("div");
+          actions.className = "task-actions";
           const time = document.createElement("small");
           time.textContent = `${item.minutes} 分钟`;
-          li.append(time);
+          const timer = document.createElement("button");
+          timer.type = "button";
+          timer.className = "pomodoro-launch";
+          timer.dataset.taskId = id;
+          timer.dataset.taskTitle = item.title;
+          timer.dataset.taskMinutes = String(item.minutes);
+          timer.setAttribute("aria-label", `为${item.title}启动${item.minutes}分钟番茄钟`);
+          timer.textContent = "◷";
+          actions.append(time, timer);
+          li.append(actions);
         }
         list.append(li);
       }

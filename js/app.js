@@ -2,6 +2,9 @@ import { initLedger } from "./ledger-ui.js";
 import { loadPlan } from "./tasks.js";
 import { initReview } from "./review-ui.js";
 import { initAssistant } from "./assistant-ui.js";
+import { createBrowserStore } from "./assistant-store.js";
+import { createPomodoroStore } from "./pomodoro-store.js";
+import { initPomodoro } from "./pomodoro-ui.js";
 
 document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEventListener("click", () => {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== button.dataset.view; });
@@ -10,8 +13,14 @@ document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEv
 }));
 
 const assistantBaseUrl = document.documentElement.dataset.assistantApi || location.origin;
-const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl });
+const assistantStore = createBrowserStore();
+const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore });
+const pomodoro = initPomodoro({
+  store: createPomodoroStore(),
+  getDeviceName: assistantStore.deviceName,
+});
 const planResult = await Promise.allSettled([loadPlan(document.querySelector("#today-view")), initLedger()]);
+if (planResult[0].status === "fulfilled") pomodoro.bindPlan(planResult[0].value);
 await initReview(planResult[0].status === "fulfilled" ? planResult[0].value : null);
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {

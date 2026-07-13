@@ -4,10 +4,12 @@ import assert from "node:assert/strict";
 import {
   completeSession,
   createSession,
+  formatClock,
   pauseSession,
   progressSummary,
   remainingMs,
   resumeSession,
+  taskStatus,
 } from "../js/pomodoro.js";
 import { createPomodoroStore } from "../js/pomodoro-store.js";
 
@@ -41,6 +43,13 @@ test("completion keeps attempts and progress counts only completed tasks", () =>
   assert.deepEqual(progressSummary([result], ["t1", "t2"]), { completed: 0, total: 2, percent: 0, focusedMinutes: 10 });
 });
 
+test("daily progress ignores results from other dated task ids", () => {
+  assert.deepEqual(progressSummary([
+    { taskId: "today", outcome: "completed", focusedSeconds: 300 },
+    { taskId: "yesterday", outcome: "completed", focusedSeconds: 3600 },
+  ], ["today"]), { completed: 1, total: 1, percent: 100, focusedMinutes: 5 });
+});
+
 test("browser store restores the active timer and queued results", () => {
   const storage = memoryStorage();
   const first = createPomodoroStore(storage);
@@ -54,4 +63,14 @@ test("browser store restores the active timer and queued results", () => {
   second.ack("e1");
   assert.deepEqual(second.pending(), []);
   assert.equal(second.results().length, 1);
+});
+
+test("clock and latest task status are deterministic", () => {
+  assert.equal(formatClock(1_500_000), "25:00");
+  assert.equal(formatClock(61_001), "01:02");
+  assert.equal(taskStatus([
+    { taskId: "t1", outcome: "unfinished" },
+    { taskId: "t1", outcome: "completed" },
+  ], "t1"), "completed");
+  assert.equal(taskStatus([], "t1"), "not-started");
 });
