@@ -6,7 +6,7 @@ export function kv(env) {
   return store;
 }
 
-export const blob = () => getStore("yuan-assistant-files");
+export const blob = (env) => env?.YUAN_ASSISTANT_BLOB ?? getStore("yuan-assistant-files");
 
 export async function listJson(prefix, store = kv()) {
   const records = [];

@@ -13,6 +13,8 @@ import { buildArchiveMessages, buildModelMessages } from "../edge-functions/_lib
 import { needsSearch } from "../edge-functions/_lib/search.js";
 import { listJson } from "../edge-functions/_lib/storage.js";
 import chatHandler from "../edge-functions/api/chat.js";
+import { selectDeletable } from "../edge-functions/api/cleanup.js";
+import { saveMemory } from "../edge-functions/api/codex.js";
 
 test("record keys are stable and owner scoped", () => {
   assert.equal(chatKey("owner", "2026-07-13", "m-1"), "chat_owner_2026_07_13_m_1");
@@ -109,4 +111,31 @@ test("chat send is idempotent and direct archive enters the Codex inbox", async 
     globalThis.fetch = originalFetch;
     delete globalThis.YUAN_ASSISTANT_KV;
   }
+});
+
+test("cleanup selects only processed records past retention", () => {
+  const now = Date.parse("2026-07-21T00:00:00Z");
+  const selected = selectDeletable([
+    { id: "old", processedAt: "2026-07-13T00:00:00Z" },
+    { id: "new", processedAt: "2026-07-20T00:00:00Z" },
+    { id: "kept", processedAt: "2026-07-01T00:00:00Z", keep: true },
+  ], now);
+  assert.deepEqual(selected.map((item) => item.id), ["old"]);
+});
+
+test("memory storage keeps the latest seven versions", async () => {
+  const data = new Map();
+  const store = {
+    async get(key) { return data.get(key) ?? null; },
+    async put(key, value) { data.set(key, typeof value === "string" && value.startsWith("[") ? JSON.parse(value) : value); },
+    async delete(key) { data.delete(key); },
+  };
+  for (let index = 1; index <= 8; index += 1) {
+    await saveMemory(store, "owner", `记忆${index}`, `v${index}`, `2026-07-${String(index).padStart(2, "0")}T00:00:00Z`);
+  }
+  const versions = data.get("memory_owner_index");
+  assert.equal(versions.length, 7);
+  assert.equal(versions[0].version, "v8");
+  assert.equal(data.has("memory_owner_v1"), false);
+  assert.equal(data.get("memory_owner_latest"), "记忆8");
 });
