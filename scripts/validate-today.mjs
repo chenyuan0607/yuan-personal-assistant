@@ -1,9 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { validatePlan } from "../js/tasks.js";
+import { validateWeeklySummary } from "../js/weekly.js";
 
 const path = new URL("../data/today.json", import.meta.url);
 const raw = await readFile(path, "utf8");
 const plan = validatePlan(JSON.parse(raw));
+const weeklyRaw = await readFile(new URL("../data/weekly.json", import.meta.url), "utf8");
+const weekly = validateWeeklySummary(JSON.parse(weeklyRaw));
 
 const forbidden = [
   /D:\\/i,
@@ -13,7 +16,7 @@ const forbidden = [
 ];
 
 for (const pattern of forbidden) {
-  if (pattern.test(raw)) throw new Error(`今日任务包含禁止发布的敏感内容：${pattern}`);
+  if (pattern.test(`${raw}\n${weeklyRaw}`)) throw new Error(`发布内容包含禁止发布的敏感内容：${pattern}`);
 }
 
-console.log(`今日任务校验通过：${plan.date}，${Object.values(plan.groups).flat().length} 项任务`);
+console.log(`发布内容校验通过：${plan.date}，${Object.values(plan.groups).flat().length} 项任务；周总结 ${weekly.weekStart}`);

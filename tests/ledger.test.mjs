@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  budgetStatus,
   createBackup,
+  filterRecords,
   parseBackup,
+  rankCategories,
   sortRecords,
   summarizeMonth,
   validateRecord,
@@ -35,7 +38,38 @@ test("sorts newest records first", () => {
 
 test("round-trips a versioned backup and rejects malformed input", () => {
   const backup = createBackup(records, "2026-07-13T05:00:00.000Z");
-  assert.equal(parseBackup(JSON.stringify(backup)).length, 3);
-  assert.throws(() => parseBackup('{"version":2,"records":[]}'), /备份版本/);
+  assert.equal(parseBackup(JSON.stringify(backup)).records.length, 3);
+  assert.throws(() => parseBackup('{"version":3,"records":[]}'), /备份版本/);
   assert.throws(() => parseBackup("not json"), /无法读取/);
+});
+
+test("classifies monthly budget thresholds", () => {
+  assert.equal(budgetStatus(7900, 10000).state, "normal");
+  assert.equal(budgetStatus(8000, 10000).state, "warning");
+  assert.equal(budgetStatus(10000, 10000).state, "warning");
+  assert.deepEqual(budgetStatus(12000, 10000), { state: "over", ratio: 1.2, remainingCents: -2000 });
+});
+
+test("ranks categories and searches category or note", () => {
+  assert.deepEqual(rankCategories({ 交通: 2400, 餐饮: 6800 }).map((item) => item.category), ["餐饮", "交通"]);
+  assert.deepEqual(filterRecords(records, "午餐").map((item) => item.id), ["1"]);
+  assert.deepEqual(filterRecords(records, "工资").map((item) => item.id), ["2"]);
+});
+
+test("imports legacy backups and round-trips version 2 settings", () => {
+  const legacy = parseBackup(JSON.stringify({ version: 1, exportedAt: "2026-07-13T00:00:00Z", records }));
+  assert.equal(legacy.version, 1);
+  assert.deepEqual(legacy.settings, {});
+  const v2 = createBackup(records, "2026-07-13T00:00:00Z", { settings: { "budget:2026-07": 300000 }, categories: [{ id: "c1", name: "学习", type: "expense", active: true }], templates: [{ id: "t1", title: "早餐", amountCents: 1200, category: "餐饮", type: "expense" }] });
+  const restored = parseBackup(JSON.stringify(v2));
+  assert.equal(restored.version, 2);
+  assert.equal(restored.settings["budget:2026-07"], 300000);
+  assert.equal(restored.categories[0].name, "学习");
+});
+
+test("rejects malformed version 2 extras before replacing data", () => {
+  const base = { version: 2, records, settings: {}, categories: [], templates: [] };
+  assert.throws(() => parseBackup(JSON.stringify({ ...base, settings: { "budget:2026-07": -1 } })), /预算设置/);
+  assert.throws(() => parseBackup(JSON.stringify({ ...base, categories: [{ name: "" }] })), /自定义分类/);
+  assert.throws(() => parseBackup(JSON.stringify({ ...base, templates: [{ title: "早餐", amountCents: 0 } ] })), /常用账目/);
 });

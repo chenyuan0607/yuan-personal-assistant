@@ -37,15 +37,36 @@ export function sortRecords(records) {
   return [...records].sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
-export function createBackup(records, exportedAt = new Date().toISOString()) {
-  return { version: 1, exportedAt, records: records.map(validateRecord) };
+export function budgetStatus(spentCents, budgetCents) {
+  const ratio = budgetCents > 0 ? spentCents / budgetCents : 0;
+  return { state: budgetCents <= 0 || ratio < 0.8 ? "normal" : ratio <= 1 ? "warning" : "over", ratio, remainingCents: budgetCents - spentCents };
+}
+
+export function rankCategories(categories) {
+  return Object.entries(categories).map(([category, amountCents]) => ({ category, amountCents })).sort((a, b) => b.amountCents - a.amountCents || a.category.localeCompare(b.category));
+}
+
+export function filterRecords(records, query) {
+  const normalized = query.trim().toLocaleLowerCase("zh-CN");
+  if (!normalized) return records;
+  return records.filter((record) => `${record.category} ${record.note || ""}`.toLocaleLowerCase("zh-CN").includes(normalized));
+}
+
+export function createBackup(records, exportedAt = new Date().toISOString(), extras = {}) {
+  return { version: 2, exportedAt, records: records.map(validateRecord), settings: extras.settings || {}, categories: extras.categories || [], templates: extras.templates || [] };
 }
 
 export function parseBackup(text) {
   let backup;
   try { backup = JSON.parse(text); } catch { throw new Error("无法读取备份文件"); }
-  if (backup?.version !== 1 || !Array.isArray(backup.records)) throw new Error("备份版本不受支持");
-  return backup.records.map(validateRecord);
+  if (![1, 2].includes(backup?.version) || !Array.isArray(backup.records)) throw new Error("备份版本不受支持");
+  const records = backup.records.map(validateRecord);
+  if (backup.version === 1) return { version: 1, records, settings: {}, categories: [], templates: [] };
+  if (!backup.settings || typeof backup.settings !== "object" || !Array.isArray(backup.categories) || !Array.isArray(backup.templates)) throw new Error("备份设置格式无效");
+  if (Object.entries(backup.settings).some(([key, value]) => !key.startsWith("budget:") || !Number.isInteger(value) || value < 0)) throw new Error("预算设置格式无效");
+  if (backup.categories.some((item) => !item?.id || !item.name?.trim() || !["income", "expense"].includes(item.type) || typeof item.active !== "boolean")) throw new Error("自定义分类格式无效");
+  if (backup.templates.some((item) => !item?.id || !item.title?.trim() || !["income", "expense"].includes(item.type) || !Number.isInteger(item.amountCents) || item.amountCents <= 0 || !item.category?.trim())) throw new Error("常用账目格式无效");
+  return { version: 2, records, settings: backup.settings, categories: backup.categories, templates: backup.templates };
 }
 
 export function formatMoney(cents) {

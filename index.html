@@ -34,16 +34,33 @@
         <div><span>收入</span><strong class="income" data-income>¥0.00</strong></div>
         <div><span>余额</span><strong data-balance>¥0.00</strong></div>
       </div>
+      <section class="budget-panel" aria-labelledby="budget-title">
+        <div class="panel-heading"><div><span class="eyebrow">月总预算</span><h3 id="budget-title" data-budget-label>尚未设置</h3></div><button id="set-budget" class="secondary" type="button">设置预算</button></div>
+        <div class="budget-track" aria-hidden="true"><span data-budget-progress></span></div>
+        <div class="budget-meta"><span data-budget-spent>已用 ¥0.00</span><span data-budget-remaining>设置后显示剩余金额</span></div>
+        <p class="budget-message" data-budget-message hidden></p>
+      </section>
+      <section class="category-chart" aria-labelledby="category-chart-title"><div class="panel-heading"><h3 id="category-chart-title">分类支出</h3><button id="manage-categories" class="text-button" type="button">管理分类</button></div><div id="category-bars" class="category-bars"><p class="empty compact">有支出后显示分类统计。</p></div></section>
       <div class="ledger-actions"><button id="export-button" class="secondary">导出备份</button><label class="secondary file-button">导入恢复<input id="import-input" type="file" accept="application/json" hidden></label></div>
+      <div id="quick-templates" class="quick-templates" aria-label="常用账目"></div>
+      <label class="search-field">搜索账目<input id="record-search" type="search" placeholder="分类或备注"></label>
       <div class="records-heading"><h3>账目明细</h3><span data-record-count>0 笔</span></div>
       <div id="record-list" class="record-list"><p class="empty">还没有账目，记下第一笔吧。</p></div>
       <button id="add-record" class="add-button" aria-label="记一笔">＋</button>
+    </section>
+
+    <section id="review-view" class="view" aria-labelledby="review-tab" hidden>
+      <div class="review-heading"><p class="eyebrow">成长回顾</p><h2>本周方向</h2></div>
+      <section class="weekly-panel"><span class="eyebrow">AI 周总结</span><h3 data-weekly-direction>正在读取本周总结…</h3><p data-weekly-summary></p><p class="evidence" data-weekly-evidence></p><ul data-weekly-adjustments></ul><small data-weekly-updated></small></section>
+      <div class="records-heading"><h3>最近 7 天</h3><span>本机记录</span></div>
+      <div id="history-list" class="history-list"><p class="empty">打开每日任务后，这里会自动留下最近记录。</p></div>
     </section>
   </main>
 
   <nav class="bottom-nav" aria-label="主要页面">
     <button id="today-tab" class="active" data-view="today-view"><span aria-hidden="true">☀</span>今天</button>
     <button id="ledger-tab" data-view="ledger-view"><span aria-hidden="true">¥</span>账本</button>
+    <button id="review-tab" data-view="review-view"><span aria-hidden="true">↺</span>回顾</button>
   </nav>
 
   <dialog id="record-dialog">
@@ -55,9 +72,12 @@
       <label>分类<select id="category" required></select></label>
       <label>日期<input id="record-date" type="date" required></label>
       <label>备注（可选）<input id="note" maxlength="80" placeholder="写点说明"></label>
+      <label class="save-template"><input id="save-template" type="checkbox"> 保存为常用账目</label>
       <div class="form-actions"><button id="delete-record" class="danger" type="button" hidden>删除</button><button class="primary" type="submit">保存账目</button></div>
     </form>
   </dialog>
+  <dialog id="budget-dialog"><form id="budget-form"><div class="dialog-head"><h2>设置月总预算</h2><button type="button" class="icon-button" data-close-dialog="budget-dialog" aria-label="关闭预算设置">×</button></div><label>预算金额（元）<input id="budget-amount" type="number" min="0" step="0.01" inputmode="decimal" required></label><button class="primary" type="submit">保存预算</button></form></dialog>
+  <dialog id="category-dialog"><form id="category-form"><div class="dialog-head"><h2>管理支出分类</h2><button type="button" class="icon-button" data-close-dialog="category-dialog" aria-label="关闭分类管理">×</button></div><label>操作<select id="category-action"><option value="add">新增分类</option><option value="disable">停用自定义分类</option></select></label><label>分类名称<input id="category-name" maxlength="12" required></label><button class="primary" type="submit">保存分类</button></form></dialog>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   <script type="module" src="./js/app.js"></script>
 </body>

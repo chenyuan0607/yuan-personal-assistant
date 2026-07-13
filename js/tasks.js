@@ -60,7 +60,9 @@ export async function loadPlan(root) {
   try {
     const response = await fetch(`./data/today.json?t=${Date.now()}`, { cache: "no-cache" });
     if (!response.ok) throw new Error("计划加载失败");
-    renderPlan(await response.json(), root);
+    const plan = validatePlan(await response.json());
+    renderPlan(plan, root);
+    return plan;
   } catch (error) {
     const warning = root.querySelector("[data-plan-warning]");
     warning.hidden = false;
