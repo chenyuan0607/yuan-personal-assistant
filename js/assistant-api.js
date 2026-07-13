@@ -17,6 +17,7 @@ export function createAssistantApi({ baseUrl, getToken, fetchImpl = fetch }) {
     return data;
   };
   return {
+    hasToken: () => Boolean(getToken()),
     login: (accessCode, deviceName) => request("/api/auth", { method: "POST", body: JSON.stringify({ accessCode, deviceName }) }),
     listMessages: (date) => request(`/api/chat?date=${encodeURIComponent(date)}`),
     sendMessage: (text, date, clientMessageId) => request(`/api/chat?date=${encodeURIComponent(date)}`, { method: "POST", body: JSON.stringify({ text, clientMessageId }) }),
@@ -25,5 +26,6 @@ export function createAssistantApi({ baseUrl, getToken, fetchImpl = fetch }) {
     listFiles: () => request("/api/files"),
     uploadFile: (formData) => request("/api/files", { method: "POST", body: formData }),
     updateFile: (id, action) => request("/api/files", { method: "PATCH", body: JSON.stringify({ id, action }) }),
+    saveFeedback: (record) => request("/api/feedback", { method: "POST", body: JSON.stringify(record) }),
   };
 }

@@ -42,6 +42,53 @@ export function budgetStatus(spentCents, budgetCents) {
   return { state: budgetCents <= 0 || ratio < 0.8 ? "normal" : ratio <= 1 ? "warning" : "over", ratio, remainingCents: budgetCents - spentCents };
 }
 
+function shortHash(value) {
+  let hash = 2166136261;
+  for (const char of String(value)) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+export function buildDailyLedgerSummary(records, settings, date, deviceName, updatedAt = new Date().toISOString()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("账本摘要日期无效");
+  const daily = { incomeCents: 0, expenseCents: 0, incomeCount: 0, expenseCount: 0, categories: {} };
+  for (const raw of records) {
+    const record = validateRecord(raw);
+    if (record.date !== date) continue;
+    if (record.type === "income") {
+      daily.incomeCents += record.amountCents;
+      daily.incomeCount += 1;
+    } else {
+      daily.expenseCents += record.amountCents;
+      daily.expenseCount += 1;
+      daily.categories[record.category] = (daily.categories[record.category] || 0) + record.amountCents;
+    }
+  }
+  const month = date.slice(0, 7);
+  const monthly = summarizeMonth(records, month);
+  const monthBudgetCents = Number.isInteger(settings?.[`budget:${month}`]) ? settings[`budget:${month}`] : 0;
+  const status = budgetStatus(monthly.expenseCents, monthBudgetCents);
+  return {
+    id: `ledger-${date}-${shortHash(deviceName)}`,
+    kind: "ledger-summary",
+    date,
+    deviceName: String(deviceName || "我的手机").slice(0, 30),
+    incomeCents: daily.incomeCents,
+    expenseCents: daily.expenseCents,
+    balanceCents: daily.incomeCents - daily.expenseCents,
+    incomeCount: daily.incomeCount,
+    expenseCount: daily.expenseCount,
+    categories: daily.categories,
+    monthBudgetCents,
+    monthExpenseCents: monthly.expenseCents,
+    monthRemainingCents: status.remainingCents,
+    budgetState: status.state,
+    updatedAt,
+  };
+}
+
 export function rankCategories(categories) {
   return Object.entries(categories).map(([category, amountCents]) => ({ category, amountCents })).sort((a, b) => b.amountCents - a.amountCents || a.category.localeCompare(b.category));
 }

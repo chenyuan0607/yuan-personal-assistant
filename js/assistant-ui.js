@@ -22,7 +22,7 @@ export async function flushPending(store, api) {
   }
 }
 
-export function initAssistant({ baseUrl, root = document, store = createBrowserStore() }) {
+export function initAssistant({ baseUrl, root = document, store = createBrowserStore(), onSession = async () => {} }) {
   const api = createAssistantApi({ baseUrl, getToken: store.token });
   const dialog = root.querySelector("#assistant-login-dialog");
   const status = root.querySelector("#assistant-status");
@@ -95,7 +95,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     try {
       const deviceName = root.querySelector("#assistant-device-name").value;
       const data = await api.login(root.querySelector("#assistant-access-code").value, deviceName);
-      store.setSession({ token: data.token, deviceName }); root.querySelector("#assistant-access-code").value = ""; dialog.close(); await refresh();
+      store.setSession({ token: data.token, deviceName }); root.querySelector("#assistant-access-code").value = ""; dialog.close(); await onSession(); await refresh();
     } catch (error) { status.textContent = error.message; }
   });
   root.querySelector("#assistant-form").addEventListener("submit", async (event) => {

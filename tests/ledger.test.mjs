@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   budgetStatus,
+  buildDailyLedgerSummary,
   createBackup,
   filterRecords,
   parseBackup,
@@ -72,4 +73,18 @@ test("rejects malformed version 2 extras before replacing data", () => {
   assert.throws(() => parseBackup(JSON.stringify({ ...base, settings: { "budget:2026-07": -1 } })), /预算设置/);
   assert.throws(() => parseBackup(JSON.stringify({ ...base, categories: [{ name: "" }] })), /自定义分类/);
   assert.throws(() => parseBackup(JSON.stringify({ ...base, templates: [{ title: "早餐", amountCents: 0 } ] })), /常用账目/);
+});
+
+test("daily ledger summary exposes aggregates but no record details", () => {
+  const result = buildDailyLedgerSummary(records, { "budget:2026-07": 300000 }, "2026-07-13", "手机A", "2026-07-13T23:59:00Z");
+  assert.deepEqual(result.categories, { 餐饮: 3580 });
+  assert.equal(result.expenseCents, 3580);
+  assert.equal(result.incomeCents, 0);
+  assert.equal(result.monthBudgetCents, 300000);
+  assert.equal(result.monthExpenseCents, 3580);
+  assert.equal(result.monthRemainingCents, 296420);
+  assert.equal(JSON.stringify(result).includes("午餐"), false);
+  assert.equal(JSON.stringify(result).includes('"records"'), false);
+  assert.match(result.id, /^ledger-2026-07-13-[a-z0-9]+$/);
+  assert.equal(result.id, buildDailyLedgerSummary(records, { "budget:2026-07": 300000 }, "2026-07-13", "手机A", "2026-07-13T23:59:00Z").id);
 });

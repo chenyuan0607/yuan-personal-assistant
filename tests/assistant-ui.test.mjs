@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js";
 import { createAssistantApi } from "../js/assistant-api.js";
+import { flushFeedback } from "../js/feedback-sync.js";
 import { formatMessage, groupMessagesByDate } from "../js/assistant-view.js";
 import { flushPending, localDate, safeSourceUrl } from "../js/assistant-ui.js";
 
@@ -59,6 +60,31 @@ test("api errors retain the response status", async () => {
     fetchImpl: async () => new Response(JSON.stringify({ ok: false, error: "过期" }), { status: 401, headers: { "content-type": "application/json" } }),
   });
   await assert.rejects(api.listMessages("2026-07-13"), (error) => error.status === 401 && error.message === "过期");
+});
+
+test("feedback api sends bearer-authenticated records", async () => {
+  const calls = [];
+  const api = createAssistantApi({
+    baseUrl: "https://assistant.example",
+    getToken: () => "token",
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify({ ok: true }), { headers: { "content-type": "application/json" } });
+    },
+  });
+  await api.saveFeedback({ id: "e1", kind: "task-result" });
+  assert.equal(calls[0].url, "https://assistant.example/api/feedback");
+  assert.equal(calls[0].options.headers.authorization, "Bearer token");
+  assert.deepEqual(JSON.parse(calls[0].options.body), { id: "e1", kind: "task-result" });
+});
+
+test("feedback queue is acknowledged only after successful upload", async () => {
+  const pending = [{ id: "e1" }, { id: "e2" }];
+  const acked = [];
+  const store = { pending: () => pending.filter((item) => !acked.includes(item.id)), ack: (id) => acked.push(id) };
+  await assert.rejects(() => flushFeedback(store, { hasToken: () => true, saveFeedback: async (item) => { if (item.id === "e2") throw new Error("offline"); } }), /offline/);
+  assert.deepEqual(acked, ["e1"]);
+  assert.deepEqual(store.pending().map((item) => item.id), ["e2"]);
 });
 
 test("assistant helpers use local dates, safe links and ordered replay", async () => {
