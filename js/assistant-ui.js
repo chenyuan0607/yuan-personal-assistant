@@ -94,8 +94,9 @@ export function initAssistant({ baseUrl, root = document }) {
   root.querySelector("#assistant-login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
-      const data = await api.login(root.querySelector("#assistant-access-code").value, root.querySelector("#assistant-device-name").value);
-      store.setToken(data.token); root.querySelector("#assistant-access-code").value = ""; dialog.close(); await refresh();
+      const deviceName = root.querySelector("#assistant-device-name").value;
+      const data = await api.login(root.querySelector("#assistant-access-code").value, deviceName);
+      store.setSession({ token: data.token, deviceName }); root.querySelector("#assistant-access-code").value = ""; dialog.close(); await refresh();
     } catch (error) { status.textContent = error.message; }
   });
   root.querySelector("#assistant-form").addEventListener("submit", async (event) => {

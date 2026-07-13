@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createMemoryStore } from "../js/assistant-store.js";
+import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js";
 import { createAssistantApi } from "../js/assistant-api.js";
 import { formatMessage, groupMessagesByDate } from "../js/assistant-view.js";
 import { flushPending, localDate, safeSourceUrl } from "../js/assistant-ui.js";
@@ -13,6 +13,18 @@ test("pending messages survive until acknowledged in insertion order", () => {
   assert.deepEqual(store.pending().map((item) => item.text), ["一", "二"]);
   store.ack("m1");
   assert.deepEqual(store.pending().map((item) => item.id), ["m2"]);
+});
+
+test("assistant browser session remembers the device name with the token", () => {
+  const data = new Map();
+  const storage = { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) };
+  const store = createBrowserStore(storage);
+  store.setSession({ token: "token", deviceName: "手机A" });
+  assert.equal(store.token(), "token");
+  assert.equal(store.deviceName(), "手机A");
+  store.clearToken();
+  assert.equal(store.token(), null);
+  assert.equal(store.deviceName(), "手机A");
 });
 
 test("message view exposes safe source fields without interpreting html", () => {

@@ -9,6 +9,16 @@ import {
   remainingMs,
   resumeSession,
 } from "../js/pomodoro.js";
+import { createPomodoroStore } from "../js/pomodoro-store.js";
+
+function memoryStorage() {
+  const data = new Map();
+  return {
+    getItem: (key) => data.get(key) ?? null,
+    setItem: (key, value) => data.set(key, String(value)),
+    removeItem: (key) => data.delete(key),
+  };
+}
 
 test("timer uses the task suggested minutes and excludes pauses", () => {
   const started = createSession({ taskId: "t1", title: "整理资料", minutes: 20, now: 1_000 });
@@ -29,4 +39,19 @@ test("completion keeps attempts and progress counts only completed tasks", () =>
   });
   assert.equal(result.focusedSeconds, 600);
   assert.deepEqual(progressSummary([result], ["t1", "t2"]), { completed: 0, total: 2, percent: 0, focusedMinutes: 10 });
+});
+
+test("browser store restores the active timer and queued results", () => {
+  const storage = memoryStorage();
+  const first = createPomodoroStore(storage);
+  first.saveSession({ taskId: "t1", status: "paused" });
+  first.addResult({ id: "e1", taskId: "t1", focusedSeconds: 120 });
+  first.addResult({ id: "e1", taskId: "t1", focusedSeconds: 120 });
+  const second = createPomodoroStore(storage);
+  assert.equal(second.session().taskId, "t1");
+  assert.deepEqual(second.pending().map((item) => item.id), ["e1"]);
+  assert.equal(second.results().length, 1);
+  second.ack("e1");
+  assert.deepEqual(second.pending(), []);
+  assert.equal(second.results().length, 1);
 });
