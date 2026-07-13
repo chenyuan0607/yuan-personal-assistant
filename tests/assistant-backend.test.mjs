@@ -12,9 +12,11 @@ import { issueToken, sha256, verifyToken } from "../edge-functions/_lib/crypto.j
 import { buildArchiveMessages, buildModelMessages } from "../edge-functions/_lib/model.js";
 import { needsSearch } from "../edge-functions/_lib/search.js";
 import { listJson } from "../edge-functions/_lib/storage.js";
+import { feedbackKey, validateFeedback } from "../edge-functions/_lib/feedback.js";
 import chatHandler from "../edge-functions/api/chat.js";
+import feedbackHandler from "../edge-functions/api/feedback.js";
+import codexHandler, { saveMemory } from "../edge-functions/api/codex.js";
 import { selectDeletable } from "../edge-functions/api/cleanup.js";
-import { saveMemory } from "../edge-functions/api/codex.js";
 
 test("record keys are stable and owner scoped", () => {
   assert.equal(chatKey("owner", "2026-07-13", "m-1"), "chat_owner_2026_07_13_m_1");
@@ -138,4 +140,42 @@ test("memory storage keeps the latest seven versions", async () => {
   assert.equal(versions[0].version, "v8");
   assert.equal(data.has("memory_owner_v1"), false);
   assert.equal(data.get("memory_owner_latest"), "记忆8");
+});
+
+test("feedback validation rejects ledger details and uses stable owner keys", () => {
+  assert.throws(() => validateFeedback({ kind: "ledger-summary", records: [] }), /字段|摘要/);
+  assert.equal(feedbackKey("owner", "ledger-summary", "2026-07-14", "ledger-1"), "feedback_owner_ledger_summary_2026_07_14_ledger_1");
+});
+
+test("feedback relay overwrites daily summaries and Codex acknowledges only after pull", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) { return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) }; },
+  };
+  const env = { SESSION_SECRET: "secret" };
+  const deviceToken = await issueToken({ sub: "owner", kind: "device", deviceName: "手机A", exp: 9999999999 }, env.SESSION_SECRET);
+  const codexToken = await issueToken({ sub: "owner", kind: "codex", exp: 9999999999 }, env.SESSION_SECRET);
+  const base = {
+    id: "ledger-2026-07-14-phone-a", kind: "ledger-summary", date: "2026-07-14", deviceName: "手机A",
+    incomeCents: 0, expenseCents: 1000, balanceCents: -1000, incomeCount: 0, expenseCount: 1,
+    categories: { 餐饮: 1000 }, monthBudgetCents: 300000, monthExpenseCents: 1000,
+    monthRemainingCents: 299000, budgetState: "normal", updatedAt: "2026-07-14T12:00:00Z",
+  };
+  const post = (body) => feedbackHandler({ env, request: new Request("https://app.example/api/feedback", { method: "POST", headers: { authorization: `Bearer ${deviceToken}`, "content-type": "application/json" }, body: JSON.stringify(body) }) });
+  try {
+    assert.equal((await post(base)).status, 200);
+    assert.equal((await post({ ...base, expenseCents: 1500, balanceCents: -1500, categories: { 餐饮: 1500 }, monthExpenseCents: 1500, monthRemainingCents: 298500 })).status, 200);
+    assert.equal([...data.keys()].filter((key) => key.startsWith("feedback_")).length, 1);
+    const pulled = await (await codexHandler({ env, request: new Request("https://app.example/api/codex?action=feedback-pull&date=2026-07-14", { headers: { authorization: `Bearer ${codexToken}` } }) })).json();
+    assert.equal(pulled.items.length, 1);
+    assert.equal(pulled.items[0].expenseCents, 1500);
+    const acked = await (await codexHandler({ env, request: new Request("https://app.example/api/codex?action=feedback-ack", { method: "POST", headers: { authorization: `Bearer ${codexToken}`, "content-type": "application/json" }, body: JSON.stringify({ ids: [base.id], localPath: "D:\\知识库\\报告.md" }) }) })).json();
+    assert.equal(acked.ok, true);
+    assert.equal([...data.values()].find((item) => item.id === base.id).status, "processed");
+  } finally {
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
 });
