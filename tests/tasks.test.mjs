@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { isPlanStale, validatePlan } from "../js/tasks.js";
+import { isPlanStale, taskId, validatePlan } from "../js/tasks.js";
 
 const validPlan = {
   date: "2026-07-13",
@@ -23,4 +23,9 @@ test("validates a daily plan", () => {
 test("detects stale plans by Beijing calendar date", () => {
   assert.equal(isPlanStale("2026-07-12", new Date("2026-07-13T01:00:00Z")), true);
   assert.equal(isPlanStale("2026-07-13", new Date("2026-07-13T01:00:00Z")), false);
+});
+
+test("task ids remain stable for the same dated task", () => {
+  assert.equal(taskId("2026-07-14", "must", 0, "整理资料"), taskId("2026-07-14", "must", 0, "整理资料"));
+  assert.notEqual(taskId("2026-07-14", "must", 0, "整理资料"), taskId("2026-07-14", "must", 1, "整理资料"));
 });

@@ -1,5 +1,15 @@
 const GROUPS = ["must", "should", "optional"];
 
+export function taskId(date, group, index, title) {
+  const source = `${date}|${group}|${index}|${title}`;
+  let hash = 2166136261;
+  for (const char of source) {
+    hash ^= char.codePointAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `task-${date}-${group}-${index}-${(hash >>> 0).toString(36)}`;
+}
+
 export function validatePlan(plan) {
   if (!plan || typeof plan !== "object") throw new Error("计划格式无效");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(plan.date || "")) throw new Error("计划日期无效");
