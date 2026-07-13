@@ -4,6 +4,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/*.test.mjs",
+    "test:backend": "node --test tests/assistant-backend.test.mjs",
     "validate:today": "node scripts/validate-today.mjs"
+  },
+  "dependencies": {
+    "@edgeone/pages-blob": "latest"
   }
 }
