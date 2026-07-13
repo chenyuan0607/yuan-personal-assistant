@@ -8,6 +8,7 @@
     "test:sync": "node --test tests/assistant-sync.test.mjs",
     "sync:assistant": "node scripts/assistant-sync/run.mjs pull",
     "sync:assistant:publish": "node scripts/assistant-sync/run.mjs publish",
+    "secrets:assistant": "node scripts/assistant-secrets.mjs",
     "token:codex": "node scripts/generate-codex-token.mjs",
     "validate:today": "node scripts/validate-today.mjs"
   },

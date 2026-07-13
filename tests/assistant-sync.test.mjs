@@ -10,6 +10,7 @@ import { createImaClient } from "../scripts/assistant-sync/ima-client.mjs";
 import { buildDailyDocument, buildMemoryPack, safeName } from "../scripts/assistant-sync/organize.mjs";
 import { pull, publish } from "../scripts/assistant-sync/run.mjs";
 import { openState } from "../scripts/assistant-sync/state.mjs";
+import { createAssistantSecrets } from "../scripts/assistant-secrets.mjs";
 
 test("config separates pull requirements from IMA publish requirements", () => {
   const base = { EDGEONE_API_URL: "https://edge.example", EDGEONE_CODEX_TOKEN: "token", YUAN_KB_ROOT: "D:\\知识库" };
@@ -78,4 +79,12 @@ test("pull never acknowledges and failed IMA publish never deletes sources", asy
   const imaFactory = () => ({ importNote: async () => { throw new Error("IMA失败"); } });
   await assert.rejects(() => publish(pulled.batchPath, env, { edgeFactory, imaFactory }), /IMA失败/);
   assert.deepEqual(calls, ["memory"]);
+});
+
+test("local secret generator creates a separate access code, hash and Codex token", async () => {
+  const secrets = await createAssistantSecrets({ nowSeconds: 100 });
+  assert.match(secrets.accessCode, /^\d{10}$/);
+  assert.notEqual(secrets.accessCode, secrets.sessionSecret);
+  assert.ok(secrets.accessCodeHash.length >= 40);
+  assert.equal(secrets.codexToken.split(".").length, 2);
 });
