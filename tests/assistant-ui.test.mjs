@@ -127,6 +127,22 @@ test("memory snapshot loads even when pending replay fails", async () => {
   assert.deepEqual(store.pending().map((item) => item.id), ["p1"]);
 });
 
+test("assistant reloads chat after sending pending messages", async () => {
+  const store = createMemoryStore({ pending: [{ id: "p1", text: "你好", date: "2026-07-15" }] });
+  const snapshots = [
+    { messages: [{ id: "old", role: "assistant", content: "旧消息" }], memory: null, archive: null },
+    { messages: [{ id: "p1", role: "user", content: "你好" }, { id: "a1", role: "assistant", content: "收到啦" }], memory: null, archive: null },
+  ];
+  const result = await refreshAssistantData(store, {
+    listMessages: async () => snapshots.shift(),
+    listFiles: async () => ({ files: [] }),
+    sendMessage: async () => {},
+  }, "2026-07-15");
+
+  assert.deepEqual(result.chatData.messages.map((item) => item.id), ["p1", "a1"]);
+  assert.deepEqual(store.pending(), []);
+});
+
 test("assistant shows thinking state without archive actions", async () => {
   const [html, script] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
@@ -182,6 +198,14 @@ test("assistant keeps the latest thinking message above the fixed composer", asy
   assert.match(script, /lastElementChild\?\.scrollIntoView\(\{ block: "end"/);
   assert.match(css, /\.assistant-messages\{[^}]*padding-bottom:96px/);
   assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:96px/);
+});
+
+test("assistant renders an AI thinking bubble while a sent message is pending", async () => {
+  const script = await readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8");
+
+  assert.match(script, /createThinkingMessage/);
+  assert.match(script, /role: "assistant"/);
+  assert.match(script, /content: "正在思考中…"/);
 });
 
 test("assistant composer uses a plus button for file upload instead of mic", async () => {

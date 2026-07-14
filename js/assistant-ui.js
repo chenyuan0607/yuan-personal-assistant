@@ -34,8 +34,10 @@ export async function loadAssistantSnapshot(api, date) {
 
 export async function refreshAssistantData(store, api, date) {
   const snapshot = await loadAssistantSnapshot(api, date);
+  const hadPending = store.pending().length > 0;
   try {
     await flushPending(store, api);
+    if (hadPending) return { ...(await loadAssistantSnapshot(api, date)), pendingError: null };
     return { ...snapshot, pendingError: null };
   } catch (error) {
     return { ...snapshot, pendingError: error };
@@ -122,20 +124,30 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     list.scrollTop = list.scrollHeight;
   };
 
+  const createThinkingMessage = (pending) => pending.length ? [{
+    id: "assistant-thinking",
+    role: "assistant",
+    content: "正在思考中…",
+    date: localDate(),
+    createdAt: new Date().toISOString(),
+    sources: [],
+    pending: true,
+  }] : [];
+
   const openLogin = () => { if (!dialog.open) dialog.showModal(); };
   const render = () => {
     const known = new Set(serverMessages.map((item) => item.id));
     const pending = store.pending().filter((item) => !known.has(item.id)).map((item) => ({
       id: item.id, role: "user", content: item.text, date: item.date, createdAt: item.createdAt, sources: [], pending: true,
     }));
-    list.replaceChildren(...[...serverMessages, ...pending].map((raw) => {
+    list.replaceChildren(...[...serverMessages, ...pending, ...createThinkingMessage(pending)].map((raw) => {
       const message = formatMessage(raw);
       const row = document.createElement("div");
       row.className = `assistant-message-row ${message.role}`;
       const article = document.createElement("article");
       article.className = `assistant-message ${message.role}${raw.pending ? " pending" : ""}`;
       const text = document.createElement("div"); text.textContent = message.content; article.append(text);
-      if (raw.pending) { const note = document.createElement("small"); note.textContent = "正在思考中"; article.append(note); }
+      if (raw.pending && message.role === "assistant") { const note = document.createElement("small"); note.textContent = "正在思考中"; article.append(note); }
       if (message.sources.length) {
         const sources = document.createElement("div"); sources.className = "assistant-sources";
         for (const source of message.sources) {
