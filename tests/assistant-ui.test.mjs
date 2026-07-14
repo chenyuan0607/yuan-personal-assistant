@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js";
 import { createAssistantApi } from "../js/assistant-api.js";
@@ -107,4 +108,18 @@ test("chat remains available when temporary file transfer is unavailable", async
   assert.deepEqual(result.chatData.messages.map((item) => item.id), ["m1"]);
   assert.deepEqual(result.fileData.files, []);
   assert.equal(result.fileAvailable, false);
+});
+
+test("assistant shows thinking state without archive actions", async () => {
+  const [html, script] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(html, /<button[^>]+assistant-(preview|direct)-archive|查看今日整理|直接归档并休息/);
+  assert.match(html, /<span id="assistant-preview-archive" hidden><\/span>/);
+  assert.match(html, /<span id="assistant-direct-archive" hidden><\/span>/);
+  assert.doesNotMatch(script, /assistant-(preview|direct)-archive/);
+  assert.match(script, /正在思考中/);
+  assert.doesNotMatch(script, /等待同步|正在发送/);
 });

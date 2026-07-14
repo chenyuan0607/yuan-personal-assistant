@@ -81,7 +81,7 @@
       <p id="assistant-archive-status" class="assistant-status">今日对话：尚未归档</p>
       <div id="assistant-messages" class="assistant-messages" aria-live="polite"></div>
       <details class="assistant-transfer"><summary>临时中转资料</summary><div id="assistant-files"></div></details>
-      <section class="assistant-archive-actions" aria-label="今日整理"><button id="assistant-preview-archive" class="secondary" type="button">查看今日整理</button><button id="assistant-direct-archive" class="secondary" type="button">直接归档并休息</button></section>
+      <span id="assistant-preview-archive" hidden></span><span id="assistant-direct-archive" hidden></span>
       <form id="assistant-form" class="assistant-composer"><label class="sr-only" for="assistant-input">给助手发送消息</label><textarea id="assistant-input" rows="2" maxlength="8000" placeholder="和助手说点什么…" required></textarea><label class="assistant-upload">添加文件<input id="assistant-file" type="file" accept="image/*,.pdf,.doc,.docx,.md,.txt" hidden></label><button class="primary" type="submit">发送</button></form>
     </section>
   </main>

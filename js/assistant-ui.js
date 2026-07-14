@@ -52,7 +52,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       const article = document.createElement("article");
       article.className = `assistant-message ${message.role}${raw.pending ? " pending" : ""}`;
       const text = document.createElement("div"); text.textContent = message.content; article.append(text);
-      if (raw.pending) { const note = document.createElement("small"); note.textContent = "等待同步"; article.append(note); }
+      if (raw.pending) { const note = document.createElement("small"); note.textContent = "正在思考中"; article.append(note); }
       if (message.sources.length) {
         const sources = document.createElement("div"); sources.className = "assistant-sources";
         for (const source of message.sources) {
@@ -111,20 +111,13 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     event.preventDefault();
     const input = root.querySelector("#assistant-input");
     store.enqueue({ id: crypto.randomUUID(), text: input.value, date: localDate(), createdAt: new Date().toISOString() });
-    input.value = ""; status.textContent = "正在发送…"; render(); await refresh();
+    input.value = ""; status.textContent = "正在思考中"; render(); await refresh();
   });
   root.querySelector("#assistant-file").addEventListener("change", async (event) => {
     const file = event.target.files[0]; if (!file) return;
     const form = new FormData(); form.append("file", file); status.textContent = "正在上传…";
     try { await api.uploadFile(form); event.target.value = ""; await refresh(); }
     catch (error) { status.textContent = error.message; }
-  });
-  root.querySelector("#assistant-preview-archive").addEventListener("click", async () => {
-    const result = await api.previewArchive(localDate());
-    if (window.confirm(`${result.document}\n\n确认归档吗？`)) { await api.directArchive(localDate()); await refresh(); }
-  });
-  root.querySelector("#assistant-direct-archive").addEventListener("click", async () => {
-    await api.directArchive(localDate()); await refresh(); status.textContent = "今天已经归档，可以休息了";
   });
   root.querySelector("#assistant-lock").addEventListener("click", () => { store.clearToken(); openLogin(); });
   return refresh;
