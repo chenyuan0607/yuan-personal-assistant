@@ -52,5 +52,6 @@ test("CloudBase relay allows the exact test site origin", async () => {
   const relay = config.functions.find((item) => item.name === "yuan-relay");
   const origins = relay.envVariables.ALLOWED_ORIGINS.split(",");
   assert.ok(origins.includes("https://yuan-assistant-test-d2bd198841e7-1453821016.tcloudbaseapp.com"));
+  assert.ok(origins.includes("https://chenyuan0607.github.io"));
   assert.ok(!origins.includes("*"));
 });
