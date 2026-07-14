@@ -1,6 +1,7 @@
 import { createAssistantApi } from "./assistant-api.js";
 import { createBrowserStore } from "./assistant-store.js";
 import { formatMessage } from "./assistant-view.js";
+import { initAssistantTools } from "./assistant-tools.js";
 
 export function localDate(value = new Date()) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
@@ -39,6 +40,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const fileList = root.querySelector("#assistant-files");
   const memoryStatus = root.querySelector("#assistant-memory-status");
   const archiveStatus = root.querySelector("#assistant-archive-status");
+  initAssistantTools({ root, status });
   let serverMessages = [];
 
   const openLogin = () => { if (!dialog.open) dialog.showModal(); };

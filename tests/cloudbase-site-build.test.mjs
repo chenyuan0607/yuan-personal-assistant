@@ -13,6 +13,7 @@ test("CloudBase test site injects its API and copies only public assets", async 
   await mkdir(join(sourceDir, "js"), { recursive: true });
   await mkdir(join(sourceDir, "data"), { recursive: true });
   await mkdir(join(sourceDir, "icons"), { recursive: true });
+  await mkdir(join(sourceDir, "assets", "stickers"), { recursive: true });
   await mkdir(join(sourceDir, ".assistant-secrets"), { recursive: true });
   await writeFile(join(sourceDir, "index.html"), '<!doctype html><html lang="zh-CN"><body></body></html>');
   await writeFile(join(sourceDir, "styles.css"), "body { color: black; }");
@@ -21,6 +22,7 @@ test("CloudBase test site injects its API and copies only public assets", async 
   await writeFile(join(sourceDir, "js", "app.js"), "export {};");
   await writeFile(join(sourceDir, "data", "today.json"), "{}");
   await writeFile(join(sourceDir, "icons", "icon-192.png"), "fixture");
+  await writeFile(join(sourceDir, "assets", "stickers", "manifest.json"), '{"version":1,"stickers":[]}');
   await writeFile(join(sourceDir, ".assistant-secrets", "key.txt"), "must-not-copy");
   await writeFile(join(sourceDir, "package.json"), '{"private":true}');
 
@@ -32,6 +34,7 @@ test("CloudBase test site injects its API and copies only public assets", async 
   assert.match(html, /<html lang="zh-CN" data-assistant-api="https:\/\/relay\.example\.com">/);
   assert.equal((html.match(/data-assistant-api=/g) ?? []).length, 1);
   assert.equal(await readFile(join(outputDir, "js", "app.js"), "utf8"), "export {};");
+  assert.match(await readFile(join(outputDir, "assets", "stickers", "manifest.json"), "utf8"), /"stickers"/);
   await assert.rejects(readFile(join(outputDir, ".assistant-secrets", "key.txt"), "utf8"), { code: "ENOENT" });
   await assert.rejects(readFile(join(outputDir, "package.json"), "utf8"), { code: "ENOENT" });
 });

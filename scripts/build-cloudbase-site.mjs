@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PUBLIC_FILES = ["index.html", "styles.css", "service-worker.js", "manifest.webmanifest"];
-const PUBLIC_DIRECTORIES = ["js", "data", "icons"];
+const PUBLIC_DIRECTORIES = ["js", "data", "icons", "assets"];
 
 function normalizeApiUrl(value) {
   const url = new URL(value);

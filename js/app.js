@@ -7,12 +7,20 @@ import { createAssistantApi } from "./assistant-api.js";
 import { flushFeedback } from "./feedback-sync.js";
 import { createPomodoroStore } from "./pomodoro-store.js";
 import { initPomodoro } from "./pomodoro-ui.js";
+import { initWeather } from "./weather.js";
+
+const showView = (viewId) => {
+  document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== viewId; });
+};
 
 document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEventListener("click", () => {
-  document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== button.dataset.view; });
+  showView(button.dataset.view);
   document.querySelectorAll(".bottom-nav button").forEach((item) => item.classList.toggle("active", item === button));
   if (button.dataset.view === "assistant-view") assistantRefresh();
 }));
+
+document.querySelectorAll("[data-tool-view]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.toolView)));
+document.querySelector("#growth-review-back").addEventListener("click", () => showView("other-view"));
 
 const assistantBaseUrl = document.documentElement.dataset.assistantApi || location.origin;
 const assistantStore = createBrowserStore();
@@ -29,6 +37,7 @@ const pomodoro = initPomodoro({
 const planResult = await Promise.allSettled([loadPlan(document.querySelector("#today-view")), initLedger({ onSummary: queueFeedback, getDeviceName: assistantStore.deviceName })]);
 if (planResult[0].status === "fulfilled") pomodoro.bindPlan(planResult[0].value);
 await initReview(planResult[0].status === "fulfilled" ? planResult[0].value : null);
+initWeather();
 await flushPendingFeedback();
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
