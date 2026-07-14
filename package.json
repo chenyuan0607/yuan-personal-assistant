@@ -7,6 +7,7 @@
     "test:backend": "node --test tests/assistant-backend.test.mjs",
     "test:sync": "node --test tests/assistant-sync.test.mjs",
     "build:cloudbase": "node scripts/build-cloudbase.mjs",
+    "build:cloudbase-site": "node scripts/build-cloudbase-site.mjs",
     "sync:assistant": "node scripts/assistant-sync/run.mjs pull",
     "sync:assistant:publish": "node scripts/assistant-sync/run.mjs publish",
     "sync:feedback": "node scripts/feedback-sync/run.mjs",
