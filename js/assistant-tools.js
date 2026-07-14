@@ -1,4 +1,4 @@
-﻿const AVATAR_KEY = "yuan-assistant-avatar";
+const AVATAR_KEY = "yuan-assistant-avatar";
 
 export function createAssistantPreferences(storage = localStorage) {
   return {
@@ -63,10 +63,6 @@ export function initAssistantTools({ root = document, status, storage = localSto
     } catch (error) { status.textContent = error.message; }
     avatarFile.value = "";
   });
-
-  const assistantFile = root.querySelector("#assistant-file");
-  const uploadEntry = root.querySelector("#assistant-upload");
-  uploadEntry.addEventListener("click", () => assistantFile.click());
 
   const stickerButton = root.querySelector("#assistant-stickers");
   const stickerPanel = root.querySelector("#assistant-sticker-panel");

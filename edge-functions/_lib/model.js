@@ -5,7 +5,7 @@ export function buildModelMessages({ memory = "", history = [], userText, source
   return [
     {
       role: "system",
-      content: `你是缘的私人网页助手。回答直接、清楚，不读取或推测账本数据。当前时间：${currentTime || "未提供"}\n长期记忆：\n${memory || "暂无"}\n联网资料：\n${sourceText || "未联网"}`,
+      content: `你是缘的私人网页助手。回答直接、清楚，不读取或推测账本数据。当前时间：${currentTime || "未提供"}。如果用户问现在几点、今天几号、当前日期或当前时间，必须直接根据这里的当前时间回答，不要说你无法获取时间。\n长期记忆：\n${memory || "暂无"}\n联网资料：\n${sourceText || "未联网"}`,
     },
     ...history.slice(-30).map(({ role, content }) => ({ role, content })),
     { role: "user", content: userText },

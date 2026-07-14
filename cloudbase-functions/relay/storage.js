@@ -41,3 +41,22 @@ export function createCloudBaseStore({ collection, regexp }) {
     },
   };
 }
+
+export function createCloudBaseBlob(app, prefix = "yuan-assistant-files") {
+  if (!app || typeof app.uploadFile !== "function" || typeof app.deleteFile !== "function") {
+    throw new Error("CloudBase file storage is not configured");
+  }
+
+  return {
+    async set(key, file) {
+      const bytes = Buffer.from(await file.arrayBuffer());
+      const cloudPath = `${prefix}/${key.replace(/^\/+/, "")}`;
+      const result = await app.uploadFile({ cloudPath, fileContent: bytes });
+      return result.fileID || result.fileId || cloudPath;
+    },
+
+    async delete(fileID) {
+      await app.deleteFile({ fileList: [fileID] });
+    },
+  };
+}

@@ -5,7 +5,8 @@ import authHandler from "../../edge-functions/api/auth.js";
 import chatHandler from "../../edge-functions/api/chat.js";
 import feedbackHandler from "../../edge-functions/api/feedback.js";
 import codexHandler from "../../edge-functions/api/codex.js";
-import { createCloudBaseStore } from "./storage.js";
+import filesHandler from "../../edge-functions/api/files.js";
+import { createCloudBaseBlob, createCloudBaseStore } from "./storage.js";
 
 const app = cloudbase.init({ env: process.env.TCB_ENV || cloudbase.SYMBOL_CURRENT_ENV });
 const database = app.database();
@@ -13,15 +14,22 @@ const store = createCloudBaseStore({
   collection: database.collection(process.env.RELAY_COLLECTION || "yuan_relay_records"),
   regexp: (source) => database.RegExp({ regexp: source, options: "" }),
 });
+const fileStore = createCloudBaseBlob(app);
 
 const handlers = new Map([
   ["/api/auth", authHandler],
   ["/api/chat", chatHandler],
   ["/api/feedback", feedbackHandler],
   ["/api/codex", codexHandler],
+  ["/api/files", filesHandler],
 ]);
 
-const env = new Proxy({}, { get: (_target, key) => process.env[key] });
+const env = new Proxy({}, {
+  get: (_target, key) => {
+    if (key === "YUAN_ASSISTANT_BLOB") return fileStore;
+    return process.env[key];
+  },
+});
 
 function corsOrigin(requestOrigin) {
   const allowed = String(process.env.ALLOWED_ORIGINS || "")
@@ -36,7 +44,7 @@ async function readBody(req) {
   let size = 0;
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 1024 * 1024) throw new Error("Request body is too large");
+    if (size > 20 * 1024 * 1024) throw new Error("Request body is too large");
     chunks.push(chunk);
   }
   return chunks.length ? Buffer.concat(chunks) : undefined;
@@ -69,7 +77,7 @@ export function createRelayServer() {
       }
       res.writeHead(204, {
         "access-control-allow-origin": origin,
-        "access-control-allow-methods": "GET,POST,DELETE,OPTIONS",
+        "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
         "access-control-allow-headers": "authorization,content-type",
         vary: "Origin",
       }).end();

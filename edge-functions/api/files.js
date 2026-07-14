@@ -40,11 +40,11 @@ export default async function onRequest({ request, env }) {
     const id = crypto.randomUUID();
     const blobKey = `${owner.sub}/${id}/${file.name.replaceAll("/", "_")}`;
     const bytes = await file.arrayBuffer();
-    await objects.set(blobKey, file);
+    const storedBlobKey = await objects.set(blobKey, file) || blobKey;
     const record = {
       id,
       kind: "file",
-      blobKey,
+      blobKey: storedBlobKey,
       name: file.name,
       size: file.size,
       sha256: await sha256Bytes(bytes),

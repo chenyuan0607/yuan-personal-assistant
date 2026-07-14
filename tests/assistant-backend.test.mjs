@@ -14,6 +14,7 @@ import { needsSearch } from "../edge-functions/_lib/search.js";
 import { listJson } from "../edge-functions/_lib/storage.js";
 import { feedbackKey, validateFeedback } from "../edge-functions/_lib/feedback.js";
 import chatHandler from "../edge-functions/api/chat.js";
+import filesHandler from "../edge-functions/api/files.js";
 import feedbackHandler from "../edge-functions/api/feedback.js";
 import codexHandler, { saveMemory } from "../edge-functions/api/codex.js";
 import { selectDeletable } from "../edge-functions/api/cleanup.js";
@@ -63,6 +64,7 @@ test("model messages include compact memory and archive prompt keeps the date", 
   });
   assert.match(messages[0].content, /沟通偏好：直接/);
   assert.match(messages[0].content, /当前时间：2026-07-15 04:53 Asia\/Shanghai/);
+  assert.match(messages[0].content, /问.*现在几点.*必须.*当前时间/);
   assert.equal(messages.at(-1).content, "继续");
   assert.match(buildArchiveMessages(messages, "2026-07-13")[1].content, /2026-07-13/);
 });
@@ -150,6 +152,42 @@ test("video links are acknowledged without spending a model call", async () => {
     assert.equal(modelCalls, 0);
   } finally {
     globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
+test("file upload stores the blob key returned by the active file store", async () => {
+  const data = new Map();
+  const uploaded = [];
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const env = {
+    SESSION_SECRET: "secret",
+    YUAN_ASSISTANT_BLOB: {
+      async set(key, file) {
+        uploaded.push({ key, name: file.name });
+        return `cloud://bucket/${key}`;
+      },
+      async delete() {},
+    },
+  };
+  const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+  const form = new FormData();
+  form.append("file", new File(["hello"], "note.txt", { type: "text/plain" }));
+  try {
+    const body = await (await filesHandler({
+      env,
+      request: new Request("https://app.example/api/files", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: form }),
+    })).json();
+    assert.equal(body.file.blobKey.startsWith("cloud://bucket/owner/"), true);
+    assert.equal(uploaded[0].name, "note.txt");
+  } finally {
     delete globalThis.YUAN_ASSISTANT_KV;
   }
 });
