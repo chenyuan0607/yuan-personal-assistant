@@ -14,5 +14,6 @@
     "optional": [
       { "title": "从知识库选一条近期观点，改写成 100 字短想法", "minutes": 15 }
     ]
-  }
+  },
+  "briefings": []
 }

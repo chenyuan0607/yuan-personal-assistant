@@ -1,4 +1,5 @@
 const GROUPS = ["must", "should", "optional"];
+const BRIEFING_TYPES = ["weekly", "monthly"];
 
 export function taskId(date, group, index, title) {
   const source = `${date}|${group}|${index}|${title}`;
@@ -22,6 +23,15 @@ export function validatePlan(plan) {
       if (item.minutes != null && (!Number.isInteger(item.minutes) || item.minutes <= 0)) throw new Error("预计用时无效");
     }
   }
+  if (plan.briefings == null) plan.briefings = [];
+  if (!Array.isArray(plan.briefings)) throw new Error("推送列表无效");
+  for (const item of plan.briefings) {
+    if (!BRIEFING_TYPES.includes(item?.type)) throw new Error("推送类型无效");
+    if (!item.title || typeof item.title !== "string") throw new Error("推送标题不能为空");
+    if (!item.summary || typeof item.summary !== "string") throw new Error("推送摘要不能为空");
+    if (item.period != null && typeof item.period !== "string") throw new Error("推送周期无效");
+    if (item.details != null && (!Array.isArray(item.details) || item.details.some((line) => typeof line !== "string" || !line.trim()))) throw new Error("推送详情无效");
+  }
   return plan;
 }
 
@@ -39,6 +49,42 @@ export function renderPlan(plan, root) {
   root.querySelector("[data-plan-updated]").textContent = new Date(safe.updatedAt).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
   root.querySelector("[data-plan-focus]").textContent = safe.focus;
   root.querySelector("[data-plan-adjustment]").textContent = safe.adjustment || "按自己的节奏完成。";
+  const briefings = root.querySelector("[data-briefings]");
+  const briefingList = root.querySelector("[data-briefing-list]");
+  if (briefings && briefingList) {
+    briefingList.replaceChildren();
+    briefings.hidden = !safe.briefings.length;
+    const names = { weekly: "周报", monthly: "月报" };
+    for (const item of safe.briefings) {
+      const card = document.createElement("details");
+      card.className = `briefing-card ${item.type}`;
+      const summary = document.createElement("summary");
+      const label = document.createElement("span");
+      label.className = "briefing-label";
+      label.textContent = names[item.type];
+      const title = document.createElement("strong");
+      title.textContent = item.title;
+      const hint = document.createElement("small");
+      hint.textContent = item.period ? `${item.period} · 点击查看` : "点击查看";
+      summary.append(label, title, hint);
+      const body = document.createElement("div");
+      body.className = "briefing-body";
+      const intro = document.createElement("p");
+      intro.textContent = item.summary;
+      body.append(intro);
+      if (item.details?.length) {
+        const list = document.createElement("ul");
+        for (const line of item.details) {
+          const li = document.createElement("li");
+          li.textContent = line;
+          list.append(li);
+        }
+        body.append(list);
+      }
+      card.append(summary, body);
+      briefingList.append(card);
+    }
+  }
   const labels = { must: "必须完成", should: "尽量完成", optional: "有余力再做" };
   for (const name of GROUPS) {
     const section = root.querySelector(`[data-task-group="${name}"]`);
