@@ -6,7 +6,7 @@ import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js"
 import { createAssistantApi } from "../js/assistant-api.js";
 import { flushFeedback } from "../js/feedback-sync.js";
 import { formatMessage, groupMessagesByDate } from "../js/assistant-view.js";
-import { flushPending, loadAssistantSnapshot, localDate, safeSourceUrl } from "../js/assistant-ui.js";
+import { refreshAssistantData, flushPending, loadAssistantSnapshot, localDate, safeSourceUrl } from "../js/assistant-ui.js";
 
 test("pending messages survive until acknowledged in insertion order", () => {
   const store = createMemoryStore();
@@ -108,6 +108,23 @@ test("chat remains available when temporary file transfer is unavailable", async
   assert.deepEqual(result.chatData.messages.map((item) => item.id), ["m1"]);
   assert.deepEqual(result.fileData.files, []);
   assert.equal(result.fileAvailable, false);
+});
+
+test("memory snapshot loads even when pending replay fails", async () => {
+  const store = createMemoryStore({ pending: [{ id: "p1", text: "未发出", date: "2026-07-15" }] });
+  const result = await refreshAssistantData(store, {
+    listMessages: async () => ({ messages: [], memory: { version: "v1", createdAt: "now" }, archive: null }),
+    listFiles: async () => ({ files: [] }),
+    sendMessage: async () => {
+      const error = new Error("AI暂时无法回答");
+      error.status = 400;
+      throw error;
+    },
+  }, "2026-07-15");
+
+  assert.equal(result.chatData.memory.version, "v1");
+  assert.equal(result.pendingError.message, "AI暂时无法回答");
+  assert.deepEqual(store.pending().map((item) => item.id), ["p1"]);
 });
 
 test("assistant shows thinking state without archive actions", async () => {

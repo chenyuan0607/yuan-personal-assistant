@@ -32,6 +32,16 @@ export async function loadAssistantSnapshot(api, date) {
   }
 }
 
+export async function refreshAssistantData(store, api, date) {
+  const snapshot = await loadAssistantSnapshot(api, date);
+  try {
+    await flushPending(store, api);
+    return { ...snapshot, pendingError: null };
+  } catch (error) {
+    return { ...snapshot, pendingError: error };
+  }
+}
+
 export function initAssistant({ baseUrl, root = document, store = createBrowserStore(), onSession = async () => {} }) {
   const api = createAssistantApi({ baseUrl, getToken: store.token });
   const dialog = root.querySelector("#assistant-login-dialog");
@@ -91,14 +101,14 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const refresh = async () => {
     if (!store.token()) { openLogin(); return; }
     try {
-      await flushPending(store, api);
-      const { chatData, fileData } = await loadAssistantSnapshot(api, localDate());
+      const { chatData, fileData, pendingError } = await refreshAssistantData(store, api, localDate());
       serverMessages = chatData.messages;
       render();
       renderFiles(fileData.files);
       memoryStatus.textContent = chatData.memory ? `记忆包：${chatData.memory.version}，更新于 ${chatData.memory.createdAt}` : "记忆包：尚未上传";
       archiveStatus.textContent = chatData.archive ? `今日对话：${chatData.archive.status}` : "今日对话：尚未归档";
       status.textContent = "两台手机已同步";
+      if (pendingError) status.textContent = "AI 暂时无法回复，记忆包和历史已读取";
     } catch (error) {
       render();
       if (error.status === 401) { store.clearToken(); openLogin(); status.textContent = "请重新输入访问码"; }
