@@ -52,20 +52,69 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const archiveStatus = root.querySelector("#assistant-archive-status");
   const assistantTools = initAssistantTools({ root, status });
   let serverMessages = [];
+  let openAvatarMenu = null;
+
+  const closeAvatarMenu = () => {
+    if (openAvatarMenu) openAvatarMenu.hidden = true;
+    openAvatarMenu = null;
+  };
+
+  const createAvatarActionMenu = () => {
+    const menu = document.createElement("div");
+    menu.className = "assistant-avatar-menu";
+    menu.hidden = true;
+    menu.addEventListener("click", (event) => event.stopPropagation());
+
+    const changeButton = document.createElement("button");
+    changeButton.type = "button";
+    changeButton.textContent = "换头像";
+    changeButton.addEventListener("click", () => {
+      closeAvatarMenu();
+      assistantTools.chooseAvatar();
+    });
+
+    const archiveButton = document.createElement("button");
+    archiveButton.type = "button";
+    archiveButton.textContent = "归档";
+    archiveButton.addEventListener("click", async () => {
+      closeAvatarMenu();
+      status.textContent = "正在归档今天的对话…";
+      try {
+        await api.directArchive(localDate());
+        status.textContent = "今天的对话已提交归档";
+        await refresh();
+      } catch (error) {
+        status.textContent = error.message || "归档失败，请稍后再试";
+      }
+    });
+
+    menu.append(changeButton, archiveButton);
+    return menu;
+  };
 
   const createAvatarButton = () => {
+    const stack = document.createElement("div");
+    stack.className = "assistant-avatar-stack";
     const button = document.createElement("button");
     button.type = "button";
     button.className = "assistant-avatar";
     button.setAttribute("aria-label", "更换 AI 头像");
     button.title = "更换 AI 头像";
-    button.addEventListener("click", assistantTools.chooseAvatar);
     const image = document.createElement("img");
     image.className = "assistant-avatar-image";
     image.src = assistantTools.getAvatarSource();
     image.alt = "AI 助手头像";
     button.append(image);
-    return button;
+    const menu = createAvatarActionMenu();
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const willOpen = menu.hidden;
+      closeAvatarMenu();
+      menu.hidden = !willOpen;
+      openAvatarMenu = willOpen ? menu : null;
+    });
+    stack.append(button, menu);
+    return stack;
   };
 
   const openLogin = () => { if (!dialog.open) dialog.showModal(); };
@@ -150,6 +199,6 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     try { await api.uploadFile(form); event.target.value = ""; await refresh(); }
     catch (error) { status.textContent = error.message; }
   });
-  root.querySelector("#assistant-lock").addEventListener("click", () => { store.clearToken(); openLogin(); });
+  root.addEventListener("click", closeAvatarMenu);
   return refresh;
 }

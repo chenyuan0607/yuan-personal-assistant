@@ -9,7 +9,7 @@ test("focus mode hides the bottom navigation when the hidden attribute is set", 
 
 test("service worker cache version includes the latest assistant shell", async () => {
   const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
-  assert.match(worker, /yuan-assistant-v13/);
+  assert.match(worker, /yuan-assistant-v14/);
 });
 
 test("result confirmation cannot be dismissed without choosing an outcome", async () => {

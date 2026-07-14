@@ -157,6 +157,21 @@ test("assistant avatar belongs to AI message rows instead of the heading", async
   assert.match(css, /\.assistant-message-row\.assistant/);
 });
 
+test("assistant chat shell removes the top header and opens avatar actions", async () => {
+  const [html, script, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(html, /class="assistant-heading"|id="assistant-lock"|今天的对话|锁定/);
+  assert.match(script, /createAvatarActionMenu/);
+  assert.match(script, /assistantTools\.chooseAvatar/);
+  assert.match(script, /api\.directArchive\(localDate\(\)\)/);
+  assert.match(css, /\.assistant-avatar-menu/);
+  assert.match(css, /\.assistant-composer\{[^}]*border-top:0/);
+});
+
 test("assistant composer uses a plus button for file upload instead of mic", async () => {
   const [html, tools] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
