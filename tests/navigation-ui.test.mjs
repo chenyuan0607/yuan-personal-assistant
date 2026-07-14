@@ -22,7 +22,9 @@ test("top bar and temporary transfer are removed", () => {
 test("other view is a weather-first tool hub", () => {
   assert.match(html, /id="other-view"/);
   assert.match(html, /id="weather-panel"/);
+  assert.match(html, /data-tool-view="assistant-backstage-view"/);
   assert.match(html, /data-tool-view="growth-review-view"/);
   assert.match(html, /href="https:\/\/synthapi\.asia\/wallet"[^>]+target="_blank"[^>]+rel="noreferrer"/);
+  assert.match(html, /id="assistant-backstage-view"[^>]+hidden/);
   assert.match(html, /id="growth-review-view"[^>]+hidden/);
 });

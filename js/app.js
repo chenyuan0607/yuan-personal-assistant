@@ -20,6 +20,7 @@ document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEv
 }));
 
 document.querySelectorAll("[data-tool-view]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.toolView)));
+document.querySelector("#assistant-backstage-back").addEventListener("click", () => showView("other-view"));
 document.querySelector("#growth-review-back").addEventListener("click", () => showView("other-view"));
 
 const assistantBaseUrl = document.documentElement.dataset.assistantApi || location.origin;

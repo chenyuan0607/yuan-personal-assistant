@@ -215,9 +215,10 @@ test("assistant composer uses a plus button for file upload instead of mic", asy
   ]);
 
   assert.doesNotMatch(html, /id="assistant-mic"|按住说话|鎸変綇璇磋瘽/);
-  assert.match(html, /id="assistant-upload"/);
+  assert.match(html, /<label[^>]+id="assistant-upload"[^>]+for="assistant-file"/);
+  assert.match(html, /id="assistant-file"[^>]+accept="image\/\*,\.pdf,\.txt,\.md,\.doc,\.docx"/);
   assert.match(html, /aria-label="上传文件"|aria-label="涓婁紶鏂囦欢"/);
-  assert.match(html, />\+<\/button>/);
+  assert.match(html, />\+<\/label>/);
   assert.match(tools, /#assistant-upload/);
-  assert.match(tools, /assistantFile\.click\(\)/);
+  assert.match(tools, /tagName === "BUTTON"/);
 });
