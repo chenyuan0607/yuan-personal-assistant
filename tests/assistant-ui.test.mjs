@@ -5,7 +5,7 @@ import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js"
 import { createAssistantApi } from "../js/assistant-api.js";
 import { flushFeedback } from "../js/feedback-sync.js";
 import { formatMessage, groupMessagesByDate } from "../js/assistant-view.js";
-import { flushPending, localDate, safeSourceUrl } from "../js/assistant-ui.js";
+import { flushPending, loadAssistantSnapshot, localDate, safeSourceUrl } from "../js/assistant-ui.js";
 
 test("pending messages survive until acknowledged in insertion order", () => {
   const store = createMemoryStore();
@@ -96,4 +96,15 @@ test("assistant helpers use local dates, safe links and ordered replay", async (
   await flushPending(store, { sendMessage: async (text) => sent.push(text) });
   assert.deepEqual(sent, ["一", "二"]);
   assert.deepEqual(store.pending(), []);
+});
+
+test("chat remains available when temporary file transfer is unavailable", async () => {
+  const result = await loadAssistantSnapshot({
+    listMessages: async () => ({ messages: [{ id: "m1", role: "assistant", content: "ok" }] }),
+    listFiles: async () => { throw new Error("files unavailable"); },
+  }, "2026-07-14");
+
+  assert.deepEqual(result.chatData.messages.map((item) => item.id), ["m1"]);
+  assert.deepEqual(result.fileData.files, []);
+  assert.equal(result.fileAvailable, false);
 });

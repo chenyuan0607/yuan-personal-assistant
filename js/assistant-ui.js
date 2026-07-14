@@ -22,6 +22,15 @@ export async function flushPending(store, api) {
   }
 }
 
+export async function loadAssistantSnapshot(api, date) {
+  const chatData = await api.listMessages(date);
+  try {
+    return { chatData, fileData: await api.listFiles(), fileAvailable: true };
+  } catch {
+    return { chatData, fileData: { files: [] }, fileAvailable: false };
+  }
+}
+
 export function initAssistant({ baseUrl, root = document, store = createBrowserStore(), onSession = async () => {} }) {
   const api = createAssistantApi({ baseUrl, getToken: store.token });
   const dialog = root.querySelector("#assistant-login-dialog");
@@ -62,7 +71,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     if (!store.token()) { openLogin(); return; }
     try {
       await flushPending(store, api);
-      const [chatData, fileData] = await Promise.all([api.listMessages(localDate()), api.listFiles()]);
+      const { chatData, fileData } = await loadAssistantSnapshot(api, localDate());
       serverMessages = chatData.messages;
       render();
       renderFiles(fileData.files);
