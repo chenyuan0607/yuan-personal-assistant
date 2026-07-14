@@ -1,8 +1,9 @@
 import { requireAuth } from "./auth.js";
 import { errorJson, json, readJson } from "../_lib/http.js";
-import { archiveKey, archivePrefix, fileKey, filePrefix } from "../_lib/records.js";
+import { archiveKey, archivePrefix, chatPrefix, fileKey, filePrefix } from "../_lib/records.js";
 import { feedbackKey, feedbackPrefix } from "../_lib/feedback.js";
 import { blob, kv, listJson } from "../_lib/storage.js";
+import { buildArchiveMessages, callModel } from "../_lib/model.js";
 
 const safePart = (value) => String(value).replace(/[^A-Za-z0-9]/g, "_");
 const memoryKey = (ownerId, version) => `memory_${safePart(ownerId)}_${safePart(version)}`;
@@ -44,6 +45,24 @@ export default async function onRequest({ request, env }) {
       if (!record) throw new Error("文件不存在");
       const content = await objects.get(record.blobKey, { type: "arrayBuffer", consistency: "strong" });
       return new Response(content, { headers: { "content-type": record.type } });
+    }
+    if (action === "archive-chat") {
+      const archiveDate = String(body.date || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(archiveDate)) throw new Error("聊天归档日期无效");
+      const history = await listJson(chatPrefix(owner.sub, archiveDate), metadata);
+      if (!history.length) throw new Error("当天还没有可以整理的对话");
+      const document = await callModel(buildArchiveMessages(history, archiveDate), env);
+      const record = {
+        id: `chat_${archiveDate.replaceAll("-", "_")}`,
+        kind: "chat-archive",
+        date: archiveDate,
+        content: document,
+        messageIds: history.map((item) => item.id),
+        createdAt: new Date().toISOString(),
+        status: "waiting",
+      };
+      await metadata.put(archiveKey(owner.sub, archiveDate), JSON.stringify(record));
+      return json({ ok: true, archive: record });
     }
     if (action === "ack") {
       const key = body.kind === "chat-archive" ? archiveKey(owner.sub, body.date) : fileKey(owner.sub, body.id);

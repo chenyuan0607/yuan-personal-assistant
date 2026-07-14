@@ -115,6 +115,80 @@ test("chat send is idempotent and direct archive enters the Codex inbox", async 
   }
 });
 
+test("video links are acknowledged without spending a model call", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  let modelCalls = 0;
+  globalThis.fetch = async () => {
+    modelCalls += 1;
+    return new Response(JSON.stringify({ choices: [{ message: { content: "should not run" } }] }), {
+      headers: { "content-type": "application/json" },
+    });
+  };
+  try {
+    const env = { SESSION_SECRET: "secret", MODEL_ENDPOINT: "https://model.example", MODEL_API_KEY: "key", MODEL_NAME: "model" };
+    const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+    const body = await (await chatHandler({
+      env,
+      request: new Request("https://app.example/api/chat?date=2026-07-14", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ text: "https://v.douyin.com/abc123/", clientMessageId: "client-00000002" }),
+      }),
+    })).json();
+    assert.equal(body.messages.at(-1).content, "已收到");
+    assert.equal(modelCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
+test("codex can archive a dated chat for nightly sync", async () => {
+  const data = new Map([
+    ["chat_owner_2026_07_14_user_1", { id: "user-1", role: "user", content: "今天聊了任务", date: "2026-07-14", createdAt: "2026-07-14T01:00:00Z", sources: [] }],
+    ["chat_owner_2026_07_14_assistant_1", { id: "assistant-1", role: "assistant", content: "我们明天继续", date: "2026-07-14", createdAt: "2026-07-14T01:01:00Z", sources: [] }],
+  ]);
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => new Response(JSON.stringify({ choices: [{ message: { content: "# 2026-07-14 聊天整理" } }] }), {
+    headers: { "content-type": "application/json" },
+  });
+  const env = { SESSION_SECRET: "secret", MODEL_ENDPOINT: "https://model.example", MODEL_API_KEY: "key", MODEL_NAME: "model" };
+  const token = await issueToken({ sub: "owner", kind: "codex", exp: 9999999999 }, env.SESSION_SECRET);
+  try {
+    const archived = await (await codexHandler({
+      env,
+      request: new Request("https://app.example/api/codex?action=archive-chat", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ date: "2026-07-14" }),
+      }),
+    })).json();
+    assert.equal(archived.archive.kind, "chat-archive");
+    assert.equal(archived.archive.status, "waiting");
+    assert.equal(data.get("archive_owner_2026_07_14").content, "# 2026-07-14 聊天整理");
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
 test("cleanup selects only processed records past retention", () => {
   const now = Date.parse("2026-07-21T00:00:00Z");
   const selected = selectDeletable([

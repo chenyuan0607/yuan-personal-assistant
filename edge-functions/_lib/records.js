@@ -16,6 +16,25 @@ export function validateMessage(value) {
   return text;
 }
 
+const DEFERRED_LINK_HOSTS = ["douyin.com", "iesdouyin.com", "v.douyin.com"];
+
+export function deferredLinkMessage(value) {
+  const text = String(value ?? "").trim();
+  const urls = text.match(/https?:\/\/[^\s]+/gi) ?? [];
+  if (!urls.length) return false;
+  const hasDeferredHost = urls.some((item) => {
+    try {
+      const host = new URL(item).hostname.toLowerCase();
+      return DEFERRED_LINK_HOSTS.some((domain) => host === domain || host.endsWith(`.${domain}`));
+    } catch {
+      return false;
+    }
+  });
+  if (!hasDeferredHost) return false;
+  const remaining = text.replace(/https?:\/\/[^\s]+/gi, "").replace(/[，。！？,.!?、\s]/g, "");
+  return remaining.length <= 20;
+}
+
 export function retentionState(record, now = Date.now()) {
   if (record.keep === true) return "keep";
   if (record.processedAt && now - Date.parse(record.processedAt) >= 7 * DAY) return "deletable";

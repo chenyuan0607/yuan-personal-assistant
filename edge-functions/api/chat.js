@@ -1,6 +1,6 @@
 import { requireAuth } from "./auth.js";
 import { errorJson, json, readJson } from "../_lib/http.js";
-import { archiveKey, chatKey, chatPrefix, validateMessage } from "../_lib/records.js";
+import { archiveKey, chatKey, chatPrefix, deferredLinkMessage, validateMessage } from "../_lib/records.js";
 import { kv, listJson } from "../_lib/storage.js";
 import { buildArchiveMessages, buildModelMessages, callModel } from "../_lib/model.js";
 import { needsSearch, searchWeb } from "../_lib/search.js";
@@ -63,6 +63,11 @@ export default async function onRequest({ request, env }) {
     if (!userRecord) {
       userRecord = { id: clientMessageId, role: "user", content: userText, date, createdAt: new Date().toISOString(), sources: [] };
       await store.put(userKey, JSON.stringify(userRecord));
+    }
+    if (deferredLinkMessage(userText)) {
+      const assistantRecord = { id: assistantId, role: "assistant", content: "已收到", date, createdAt: new Date().toISOString(), sources: [] };
+      await store.put(assistantKey, JSON.stringify(assistantRecord));
+      return json({ ok: true, messages: [userRecord, assistantRecord] });
     }
     const memory = await store.get(memoryLatestKey(owner.sub)) || "";
     const sources = needsSearch(userText) ? await searchWeb(userText, env) : [];

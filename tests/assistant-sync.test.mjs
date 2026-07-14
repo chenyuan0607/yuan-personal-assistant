@@ -37,8 +37,11 @@ test("EdgeOne client sends bearer token and item ids", async () => {
   });
   await client.pull();
   await client.download("f1");
+  await client.archiveChat("2026-07-14");
   assert.equal(calls[0].options.headers.authorization, "Bearer secret");
   assert.deepEqual(JSON.parse(calls[1].options.body), { id: "f1" });
+  assert.equal(calls[2].url, "https://edge.example/api/codex?action=archive-chat");
+  assert.deepEqual(JSON.parse(calls[2].options.body), { date: "2026-07-14" });
 });
 
 test("IMA client writes Markdown with official authentication headers", async () => {
