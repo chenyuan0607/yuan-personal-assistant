@@ -66,7 +66,7 @@ export function initAssistantTools({ root = document, status, storage = localSto
 
   const assistantFile = root.querySelector("#assistant-file");
   const uploadEntry = root.querySelector("#assistant-upload");
-  if (uploadEntry.tagName === "BUTTON") uploadEntry.addEventListener("click", () => assistantFile.click());
+  uploadEntry.addEventListener("click", () => assistantFile.click());
 
   const stickerButton = root.querySelector("#assistant-stickers");
   const stickerPanel = root.querySelector("#assistant-sticker-panel");

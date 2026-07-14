@@ -209,16 +209,20 @@ test("assistant renders an AI thinking bubble while a sent message is pending", 
 });
 
 test("assistant composer uses a plus button for file upload instead of mic", async () => {
-  const [html, tools] = await Promise.all([
+  const [html, tools, css] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../js/assistant-tools.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
   ]);
 
   assert.doesNotMatch(html, /id="assistant-mic"|按住说话|鎸変綇璇磋瘽/);
-  assert.match(html, /<label[^>]+id="assistant-upload"[^>]+for="assistant-file"/);
+  assert.match(html, /<button[^>]+id="assistant-upload"[^>]+type="button"/);
   assert.match(html, /id="assistant-file"[^>]+accept="image\/\*,\.pdf,\.txt,\.md,\.doc,\.docx"/);
+  assert.doesNotMatch(html, /id="assistant-file"[^>]+hidden/);
+  assert.match(html, /id="assistant-file"[^>]+class="assistant-file-input"/);
   assert.match(html, /aria-label="上传文件"|aria-label="涓婁紶鏂囦欢"/);
-  assert.match(html, />\+<\/label>/);
+  assert.match(html, />\+<\/button>/);
   assert.match(tools, /#assistant-upload/);
-  assert.match(tools, /tagName === "BUTTON"/);
+  assert.match(tools, /uploadEntry\.addEventListener\("click", \(\) => assistantFile\.click\(\)\)/);
+  assert.match(css, /\.assistant-file-input/);
 });
