@@ -4,6 +4,10 @@ import test from "node:test";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 
+test("formal page points assistant requests to the current CloudBase relay", () => {
+  assert.match(html, /<html[^>]+data-assistant-api="https:\/\/yuan-assistant-test-d2bd198841e7\.service\.tcloudbase\.com"/);
+});
+
 test("navigation opens today and orders today, assistant, ledger, other", () => {
   const nav = html.match(/<nav class="bottom-nav"[\s\S]*?<\/nav>/)?.[0] ?? "";
   assert.deepEqual([...nav.matchAll(/<button[^>]*>(?:<span[^>]*>.*?<\/span>)?([^<]+)/g)].map((match) => match[1].trim()), ["今天", "助手", "账本", "其他"]);

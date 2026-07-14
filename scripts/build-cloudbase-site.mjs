@@ -12,7 +12,7 @@ function normalizeApiUrl(value) {
 }
 
 function injectAssistantApi(html, apiUrl) {
-  if (/\bdata-assistant-api\s*=/.test(html)) throw new Error("index.html already defines data-assistant-api");
+  if (/\bdata-assistant-api\s*=/.test(html)) return html.replace(/data-assistant-api="[^"]*"/, `data-assistant-api="${apiUrl}"`);
   const openingHtml = /<html\b([^>]*)>/i;
   if (!openingHtml.test(html)) throw new Error("index.html is missing an html element");
   return html.replace(openingHtml, `<html$1 data-assistant-api="${apiUrl}">`);
