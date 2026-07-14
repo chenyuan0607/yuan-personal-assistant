@@ -43,3 +43,11 @@ test("CloudBase test site rejects a non-HTTPS API", async () => {
     /HTTPS/,
   );
 });
+
+test("CloudBase relay allows the exact test site origin", async () => {
+  const config = JSON.parse(await readFile(new URL("../cloudbaserc.json", import.meta.url), "utf8"));
+  const relay = config.functions.find((item) => item.name === "yuan-relay");
+  const origins = relay.envVariables.ALLOWED_ORIGINS.split(",");
+  assert.ok(origins.includes("https://yuan-assistant-test-d2bd198841e7-1453821016.tcloudbaseapp.com"));
+  assert.ok(!origins.includes("*"));
+});
