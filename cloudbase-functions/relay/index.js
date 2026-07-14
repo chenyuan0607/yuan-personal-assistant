@@ -90,7 +90,8 @@ export function createRelayServer() {
         await sendResponse(res, Response.json({ ok: true, service: "yuan-cloudbase-relay" }), origin);
         return;
       }
-      const handler = handlers.get(url.pathname);
+      const pathname = url.pathname.replace(/\/+$/, "") || "/";
+      const handler = handlers.get(pathname) || (pathname === "/" ? filesHandler : null);
       if (!handler) {
         await sendResponse(res, Response.json({ ok: false, error: "Not Found" }, { status: 404 }), origin);
         return;

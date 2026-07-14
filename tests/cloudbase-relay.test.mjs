@@ -9,6 +9,7 @@ test("CloudBase relay exposes file upload routes and mobile upload methods", asy
   assert.match(relay, /createCloudBaseBlob/);
   assert.match(relay, /YUAN_ASSISTANT_BLOB/);
   assert.match(relay, /\["\/api\/files", filesHandler\]/);
+  assert.match(relay, /pathname === "\/" \? filesHandler : null/);
   assert.match(relay, /GET,POST,PATCH,DELETE,OPTIONS/);
   assert.match(relay, /20 \* 1024 \* 1024/);
 });
