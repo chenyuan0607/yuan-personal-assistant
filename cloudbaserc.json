@@ -12,7 +12,9 @@
       "envVariables": {
         "TCB_ENV": "yuan-assistant-test-d2bd198841e7",
         "RELAY_COLLECTION": "yuan_relay_records",
-        "ALLOWED_ORIGINS": "https://yuan-personal-assistant.edgeone.dev,http://127.0.0.1:4173,http://localhost:4173"
+        "ALLOWED_ORIGINS": "https://yuan-personal-assistant.edgeone.dev,http://127.0.0.1:4173,http://localhost:4173",
+        "MODEL_ENDPOINT": "https://synthapi.asia/v1/chat/completions",
+        "MODEL_NAME": "deepseek-v4-flash"
       }
     }
   ]
