@@ -172,6 +172,18 @@ test("assistant chat shell removes the top header and opens avatar actions", asy
   assert.match(css, /\.assistant-composer\{[^}]*border-top:0/);
 });
 
+test("assistant keeps the latest thinking message above the fixed composer", async () => {
+  const [script, css] = await Promise.all([
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(script, /scrollLatestMessageIntoView/);
+  assert.match(script, /lastElementChild\?\.scrollIntoView\(\{ block: "end"/);
+  assert.match(css, /\.assistant-messages\{[^}]*padding-bottom:96px/);
+  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:96px/);
+});
+
 test("assistant composer uses a plus button for file upload instead of mic", async () => {
   const [html, tools] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),

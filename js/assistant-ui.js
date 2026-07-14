@@ -117,6 +117,11 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     return stack;
   };
 
+  const scrollLatestMessageIntoView = () => {
+    list.lastElementChild?.scrollIntoView({ block: "end", behavior: "smooth" });
+    list.scrollTop = list.scrollHeight;
+  };
+
   const openLogin = () => { if (!dialog.open) dialog.showModal(); };
   const render = () => {
     const known = new Set(serverMessages.map((item) => item.id));
@@ -144,7 +149,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       row.append(article);
       return row;
     }));
-    list.scrollTop = list.scrollHeight;
+    scrollLatestMessageIntoView();
   };
 
   const refresh = async () => {
