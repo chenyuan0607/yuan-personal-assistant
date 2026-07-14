@@ -76,7 +76,6 @@
         <p id="weather-status" class="assistant-status" role="status"></p>
       </section>
       <section class="tool-grid" aria-label="其他功能">
-        <button class="tool-entry" type="button" data-tool-view="assistant-backstage-view"><span class="tool-icon" aria-hidden="true">⌁</span><strong>助手后台</strong><small>夜间整理、链接素材与记忆同步状态</small></button>
         <button class="tool-entry" type="button" data-tool-view="growth-review-view"><span class="tool-icon" aria-hidden="true">↺</span><strong>成长回顾</strong><small>本周方向与最近记录</small></button>
         <a class="tool-entry" href="https://synthapi.asia/wallet" target="_blank" rel="noreferrer"><span class="tool-icon" aria-hidden="true">¥</span><strong>AI 充值</strong><small>打开 SynthAPI 钱包</small></a>
       </section>
@@ -117,10 +116,6 @@
       <header class="assistant-chat-topbar">
         <h2 id="assistant-title">缘的小助手</h2>
         <button id="assistant-menu" class="assistant-menu-button" type="button" aria-label="打开助手菜单" title="助手菜单">…</button>
-        <div id="assistant-menu-panel" class="assistant-menu-panel" hidden>
-          <button id="assistant-menu-avatar" type="button">换头像</button>
-          <button id="assistant-menu-archive" type="button">归档今天对话</button>
-        </div>
       </header>
       <p id="assistant-status" class="assistant-status assistant-chat-status" role="status">正在连接…</p>
       <p id="assistant-memory-status" class="assistant-status assistant-meta-status">记忆包：尚未读取</p>
@@ -130,6 +125,21 @@
       <span id="assistant-preview-archive" hidden></span><span id="assistant-direct-archive" hidden></span>
       <div id="assistant-sticker-panel" class="assistant-sticker-panel" hidden></div>
       <form id="assistant-form" class="assistant-composer"><label class="sr-only" for="assistant-input">给助手发送消息</label><textarea id="assistant-input" rows="2" maxlength="8000" placeholder="和助手说点什么…" required></textarea><button id="assistant-stickers" class="composer-icon" type="button" aria-label="表情包" title="表情包">☺</button><button id="assistant-upload" class="composer-icon" type="button" aria-label="上传文件" title="上传文件">+</button><button class="primary" type="submit">发送</button></form>
+    </section>
+
+    <section id="assistant-menu-view" class="view assistant-menu-page" hidden>
+      <header class="assistant-info-topbar">
+        <button id="assistant-menu-back" class="assistant-info-back" type="button" aria-label="返回AI助手">‹</button>
+        <h2>聊天信息</h2>
+      </header>
+      <section class="assistant-info-list" aria-label="助手功能">
+        <button id="assistant-menu-avatar" class="assistant-info-row" type="button"><span>换头像</span><small>›</small></button>
+        <button id="assistant-menu-archive" class="assistant-info-row" type="button"><span>归档今天对话</span><small>›</small></button>
+      </section>
+      <section class="assistant-info-list" aria-label="助手工具">
+        <button class="assistant-info-row" type="button" data-tool-view="assistant-backstage-view"><span>助手后台</span><small>›</small></button>
+        <a class="assistant-info-row" href="https://platform.deepseek.com/top_up" target="_blank" rel="noreferrer"><span>小助手充值</span><small>›</small></a>
+      </section>
     </section>
   </main>
 

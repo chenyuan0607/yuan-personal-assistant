@@ -5,7 +5,7 @@ import { readFile } from "node:fs/promises";
 import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js";
 import { createAssistantApi } from "../js/assistant-api.js";
 import { flushFeedback } from "../js/feedback-sync.js";
-import { formatMessage, groupMessagesByDate } from "../js/assistant-view.js";
+import { formatChatTimeLabel, formatMessage, groupMessagesByDate, shouldShowTimeDivider } from "../js/assistant-view.js";
 import { refreshAssistantData, flushPending, loadAssistantSnapshot, localDate, safeSourceUrl } from "../js/assistant-ui.js";
 
 test("pending messages survive until acknowledged in insertion order", () => {
@@ -37,6 +37,15 @@ test("message view exposes safe source fields without interpreting html", () => 
 
 test("messages are grouped by their explicit date", () => {
   assert.deepEqual(Object.keys(groupMessagesByDate([{ date: "2026-07-13" }, { date: "2026-07-14" }])), ["2026-07-13", "2026-07-14"]);
+});
+
+test("chat time labels follow messaging app style", () => {
+  const now = new Date("2026-07-15T05:11:00+08:00");
+  assert.equal(formatChatTimeLabel("2026-07-15T04:53:00+08:00", now), "04:53");
+  assert.equal(formatChatTimeLabel("2026-07-14T15:52:00+08:00", now), "昨天 15:52");
+  assert.equal(shouldShowTimeDivider(null, { createdAt: "2026-07-15T04:53:00+08:00" }), true);
+  assert.equal(shouldShowTimeDivider({ createdAt: "2026-07-15T04:53:00+08:00" }, { createdAt: "2026-07-15T04:59:00+08:00" }), false);
+  assert.equal(shouldShowTimeDivider({ createdAt: "2026-07-15T04:53:00+08:00" }, { createdAt: "2026-07-15T05:11:00+08:00" }), true);
 });
 
 test("api client adds bearer token and reuses the client message id", async () => {
@@ -173,7 +182,7 @@ test("assistant avatar belongs to AI message rows instead of the heading", async
   assert.match(css, /\.assistant-message-row\.assistant/);
 });
 
-test("assistant chat shell removes the old header and uses the roof menu for actions", async () => {
+test("assistant chat shell removes the old header and opens a roof tools page", async () => {
   const [html, script, css] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
@@ -181,14 +190,24 @@ test("assistant chat shell removes the old header and uses the roof menu for act
   ]);
 
   assert.doesNotMatch(html, /class="assistant-heading"|id="assistant-lock"|今天的对话|锁定/);
-  assert.match(script, /#assistant-menu-avatar/);
-  assert.match(script, /#assistant-menu-archive/);
+  assert.match(html, /id="assistant-menu-view"/);
+  assert.match(html, /id="assistant-menu-back"/);
+  assert.match(html, /<h2>聊天信息<\/h2>/);
+  assert.match(html, /id="assistant-menu-avatar"/);
+  assert.match(html, /id="assistant-menu-archive"/);
+  assert.match(html, /href="https:\/\/platform\.deepseek\.com\/top_up"/);
+  assert.match(html, /class="assistant-info-list"/);
+  assert.match(html, /class="assistant-info-row"/);
+  assert.doesNotMatch(html, /assistant-action-grid|assistant-action-card|聊天信息[\s\S]{0,500}assistant-avatar-image/);
+  assert.match(script, /showAssistantMenu/);
   assert.match(script, /api\.directArchive\(localDate\(\)\)/);
-  assert.match(css, /\.assistant-menu-panel/);
+  assert.match(css, /\.assistant-menu-page/);
+  assert.match(css, /\.assistant-info-list/);
+  assert.match(css, /\.assistant-info-row/);
   assert.match(css, /\.assistant-composer\{[^}]*border-top:0/);
 });
 
-test("assistant chat uses a WeChat-like roof menu instead of avatar actions", async () => {
+test("assistant chat uses a WeChat-like roof page instead of avatar actions", async () => {
   const [html, script, css] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
@@ -197,17 +216,21 @@ test("assistant chat uses a WeChat-like roof menu instead of avatar actions", as
 
   assert.match(html, /class="assistant-chat-topbar"/);
   assert.match(html, /id="assistant-menu"[^>]+>…<\/button>/);
-  assert.match(html, /id="assistant-menu-panel"/);
+  assert.doesNotMatch(html, /id="assistant-menu-panel"/);
   assert.match(html, /id="assistant-menu-avatar"/);
   assert.match(html, /id="assistant-menu-archive"/);
+  assert.match(html, /data-tool-view="assistant-backstage-view"/);
+  assert.doesNotMatch(html, /<button class="tool-entry" type="button" data-tool-view="assistant-backstage-view"/);
   const assistantSection = html.match(/<section id="assistant-view"[\s\S]*?<\/section>/)?.[0] || "";
   assert.doesNotMatch(assistantSection, /assistant-back-button|← 返回/);
   assert.match(script, /#assistant-menu/);
   assert.match(script, /#assistant-menu-archive/);
+  assert.match(script, /assistant-menu-view/);
+  assert.match(script, /assistant-view/);
   assert.doesNotMatch(script, /createAvatarActionMenu/);
   assert.doesNotMatch(script, /button\.className = "assistant-avatar"/);
   assert.match(css, /\.assistant-chat-topbar/);
-  assert.match(css, /\.assistant-menu-panel/);
+  assert.match(css, /\.assistant-time-divider/);
   assert.match(css, /\.assistant-message\.user\{[^}]*background:#95ec69/);
 });
 
@@ -219,6 +242,7 @@ test("assistant keeps the latest thinking message above the fixed composer", asy
 
   assert.match(script, /scrollLatestMessageIntoView/);
   assert.match(script, /lastElementChild\?\.scrollIntoView\(\{ block: "end"/);
+  assert.match(script, /assistant-time-divider/);
   assert.match(css, /\.assistant-messages\{[^}]*padding-bottom:96px/);
   assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:96px/);
 });

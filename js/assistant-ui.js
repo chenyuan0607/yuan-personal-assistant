@@ -1,6 +1,6 @@
 import { createAssistantApi } from "./assistant-api.js";
 import { createBrowserStore } from "./assistant-store.js";
-import { formatMessage } from "./assistant-view.js";
+import { formatChatTimeLabel, formatMessage, shouldShowTimeDivider } from "./assistant-view.js";
 import { initAssistantTools } from "./assistant-tools.js";
 
 export function localDate(value = new Date()) {
@@ -44,7 +44,7 @@ export async function refreshAssistantData(store, api, date) {
   }
 }
 
-export function initAssistant({ baseUrl, root = document, store = createBrowserStore(), onSession = async () => {} }) {
+export function initAssistant({ baseUrl, root = document, store = createBrowserStore(), onSession = async () => {}, onMenu = () => {} }) {
   const api = createAssistantApi({ baseUrl, getToken: store.token });
   const dialog = root.querySelector("#assistant-login-dialog");
   const status = root.querySelector("#assistant-status");
@@ -55,11 +55,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const assistantTools = initAssistantTools({ root, status });
   let serverMessages = [];
   const menuButton = root.querySelector("#assistant-menu");
-  const menuPanel = root.querySelector("#assistant-menu-panel");
-
-  const closeMenu = () => {
-    menuPanel.hidden = true;
-  };
+  const showAssistantMenu = () => onMenu("assistant-menu-view");
 
   const createAvatarButton = () => {
     const stack = document.createElement("div");
@@ -96,8 +92,17 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     const pending = store.pending().filter((item) => !known.has(item.id)).map((item) => ({
       id: item.id, role: "user", content: item.text, date: item.date, createdAt: item.createdAt, sources: [], pending: true,
     }));
-    list.replaceChildren(...[...serverMessages, ...pending, ...createThinkingMessage(pending)].map((raw) => {
+    let previousMessage = null;
+    list.replaceChildren(...[...serverMessages, ...pending, ...createThinkingMessage(pending)].flatMap((raw) => {
       const message = formatMessage(raw);
+      const nodes = [];
+      if (shouldShowTimeDivider(previousMessage, raw)) {
+        const divider = document.createElement("div");
+        divider.className = "assistant-time-divider";
+        divider.textContent = formatChatTimeLabel(raw.createdAt);
+        nodes.push(divider);
+      }
+      previousMessage = raw;
       const row = document.createElement("div");
       row.className = `assistant-message-row ${message.role}`;
       const article = document.createElement("article");
@@ -115,7 +120,8 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       }
       if (message.role === "assistant") row.append(createAvatarButton());
       row.append(article);
-      return row;
+      nodes.push(row);
+      return nodes;
     }));
     scrollLatestMessageIntoView();
   };
@@ -172,17 +178,11 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     try { await api.uploadFile(form); event.target.value = ""; await refresh(); }
     catch (error) { status.textContent = error.message; }
   });
-  menuButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    menuPanel.hidden = !menuPanel.hidden;
-  });
-  menuPanel.addEventListener("click", (event) => event.stopPropagation());
+  menuButton.addEventListener("click", showAssistantMenu);
   root.querySelector("#assistant-menu-avatar").addEventListener("click", () => {
-    closeMenu();
     assistantTools.chooseAvatar();
   });
   root.querySelector("#assistant-menu-archive").addEventListener("click", async () => {
-    closeMenu();
     status.textContent = "正在归档今天的对话…";
     try {
       await api.directArchive(localDate());
@@ -192,6 +192,5 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       status.textContent = error.message || "归档失败，请稍后再试";
     }
   });
-  root.addEventListener("click", closeMenu);
   return refresh;
 }

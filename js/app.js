@@ -20,7 +20,8 @@ document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEv
 }));
 
 document.querySelectorAll("[data-tool-view]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.toolView)));
-document.querySelector("#assistant-backstage-back").addEventListener("click", () => showView("other-view"));
+document.querySelector("#assistant-menu-back").addEventListener("click", () => { showView("assistant-view"); assistantRefresh(); });
+document.querySelector("#assistant-backstage-back").addEventListener("click", () => showView("assistant-menu-view"));
 document.querySelector("#growth-review-back").addEventListener("click", () => showView("other-view"));
 
 const assistantBaseUrl = document.documentElement.dataset.assistantApi || location.origin;
@@ -29,7 +30,7 @@ const pomodoroStore = createPomodoroStore();
 const feedbackApi = createAssistantApi({ baseUrl: assistantBaseUrl, getToken: assistantStore.token });
 const flushPendingFeedback = () => flushFeedback(pomodoroStore, feedbackApi).catch(() => ({ sent: 0 }));
 const queueFeedback = async (record) => { pomodoroStore.addResult(record); await flushPendingFeedback(); };
-const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore, onSession: flushPendingFeedback });
+const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore, onSession: flushPendingFeedback, onMenu: (viewId = "assistant-menu-view") => showView(viewId) });
 const pomodoro = initPomodoro({
   store: pomodoroStore,
   getDeviceName: assistantStore.deviceName,
