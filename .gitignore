@@ -9,3 +9,4 @@ node_modules/
 .assistant-secrets/
 .assistant-sync-state/
 cloudbase-dist/
+cloudbase-site-dist/
