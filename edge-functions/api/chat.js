@@ -7,6 +7,15 @@ import { needsSearch, searchWeb } from "../_lib/search.js";
 
 const memoryLatestKey = (ownerId) => `memory_${ownerId}_latest`;
 const memoryIndexKey = (ownerId) => `memory_${ownerId}_index`;
+const currentTimeText = (now = new Date()) => `${new Intl.DateTimeFormat("zh-CN", {
+  timeZone: "Asia/Shanghai",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+}).format(now)} Asia/Shanghai`;
 
 async function getJson(store, key) {
   return store.get(key, { type: "json" });
@@ -71,7 +80,7 @@ export default async function onRequest({ request, env }) {
     }
     const memory = await store.get(memoryLatestKey(owner.sub)) || "";
     const sources = needsSearch(userText) ? await searchWeb(userText, env) : [];
-    const answer = await callModel(buildModelMessages({ memory, history, userText, sources }), env);
+    const answer = await callModel(buildModelMessages({ memory, history, userText, sources, currentTime: currentTimeText() }), env);
     const assistantRecord = { id: assistantId, role: "assistant", content: answer, date, createdAt: new Date().toISOString(), sources };
     await store.put(assistantKey, JSON.stringify(assistantRecord));
     return json({ ok: true, messages: [userRecord, assistantRecord] });

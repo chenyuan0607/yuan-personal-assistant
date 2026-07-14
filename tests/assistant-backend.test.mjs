@@ -59,8 +59,10 @@ test("model messages include compact memory and archive prompt keeps the date", 
     memory: "沟通偏好：直接",
     history: [{ role: "user", content: "你好" }],
     userText: "继续",
+    currentTime: "2026-07-15 04:53 Asia/Shanghai",
   });
   assert.match(messages[0].content, /沟通偏好：直接/);
+  assert.match(messages[0].content, /当前时间：2026-07-15 04:53 Asia\/Shanghai/);
   assert.equal(messages.at(-1).content, "继续");
   assert.match(buildArchiveMessages(messages, "2026-07-13")[1].content, /2026-07-13/);
 });

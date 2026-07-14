@@ -1,11 +1,11 @@
-export function buildModelMessages({ memory = "", history = [], userText, sources = [] }) {
+export function buildModelMessages({ memory = "", history = [], userText, sources = [], currentTime = "" }) {
   const sourceText = sources
     .map((item, index) => `[${index + 1}] ${item.title} ${item.url}\n日期：${item.date || "未注明"}\n${item.snippet || ""}`)
     .join("\n");
   return [
     {
       role: "system",
-      content: `你是缘的私人网页助手。回答直接、清楚，不读取或推测账本数据。长期记忆：\n${memory || "暂无"}\n联网资料：\n${sourceText || "未联网"}`,
+      content: `你是缘的私人网页助手。回答直接、清楚，不读取或推测账本数据。当前时间：${currentTime || "未提供"}\n长期记忆：\n${memory || "暂无"}\n联网资料：\n${sourceText || "未联网"}`,
     },
     ...history.slice(-30).map(({ role, content }) => ({ role, content })),
     { role: "user", content: userText },

@@ -173,7 +173,7 @@ test("assistant avatar belongs to AI message rows instead of the heading", async
   assert.match(css, /\.assistant-message-row\.assistant/);
 });
 
-test("assistant chat shell removes the top header and opens avatar actions", async () => {
+test("assistant chat shell removes the old header and uses the roof menu for actions", async () => {
   const [html, script, css] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
@@ -181,11 +181,34 @@ test("assistant chat shell removes the top header and opens avatar actions", asy
   ]);
 
   assert.doesNotMatch(html, /class="assistant-heading"|id="assistant-lock"|今天的对话|锁定/);
-  assert.match(script, /createAvatarActionMenu/);
-  assert.match(script, /assistantTools\.chooseAvatar/);
+  assert.match(script, /#assistant-menu-avatar/);
+  assert.match(script, /#assistant-menu-archive/);
   assert.match(script, /api\.directArchive\(localDate\(\)\)/);
-  assert.match(css, /\.assistant-avatar-menu/);
+  assert.match(css, /\.assistant-menu-panel/);
   assert.match(css, /\.assistant-composer\{[^}]*border-top:0/);
+});
+
+test("assistant chat uses a WeChat-like roof menu instead of avatar actions", async () => {
+  const [html, script, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(html, /class="assistant-chat-topbar"/);
+  assert.match(html, /id="assistant-menu"[^>]+>…<\/button>/);
+  assert.match(html, /id="assistant-menu-panel"/);
+  assert.match(html, /id="assistant-menu-avatar"/);
+  assert.match(html, /id="assistant-menu-archive"/);
+  const assistantSection = html.match(/<section id="assistant-view"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.doesNotMatch(assistantSection, /assistant-back-button|← 返回/);
+  assert.match(script, /#assistant-menu/);
+  assert.match(script, /#assistant-menu-archive/);
+  assert.doesNotMatch(script, /createAvatarActionMenu/);
+  assert.doesNotMatch(script, /button\.className = "assistant-avatar"/);
+  assert.match(css, /\.assistant-chat-topbar/);
+  assert.match(css, /\.assistant-menu-panel/);
+  assert.match(css, /\.assistant-message\.user\{[^}]*background:#95ec69/);
 });
 
 test("assistant keeps the latest thinking message above the fixed composer", async () => {

@@ -114,14 +114,22 @@
 
     <section id="assistant-view" class="view assistant-view" aria-labelledby="assistant-tab" hidden>
       <input id="assistant-avatar-file" type="file" accept="image/*" hidden>
-      <p id="assistant-status" class="assistant-status" role="status">正在连接…</p>
-      <p id="assistant-memory-status" class="assistant-status">记忆包：尚未读取</p>
-      <p id="assistant-archive-status" class="assistant-status">今日对话：尚未归档</p>
+      <header class="assistant-chat-topbar">
+        <h2 id="assistant-title">缘的小助手</h2>
+        <button id="assistant-menu" class="assistant-menu-button" type="button" aria-label="打开助手菜单" title="助手菜单">…</button>
+        <div id="assistant-menu-panel" class="assistant-menu-panel" hidden>
+          <button id="assistant-menu-avatar" type="button">换头像</button>
+          <button id="assistant-menu-archive" type="button">归档今天对话</button>
+        </div>
+      </header>
+      <p id="assistant-status" class="assistant-status assistant-chat-status" role="status">正在连接…</p>
+      <p id="assistant-memory-status" class="assistant-status assistant-meta-status">记忆包：尚未读取</p>
+      <p id="assistant-archive-status" class="assistant-status assistant-meta-status">今日对话：尚未归档</p>
       <div id="assistant-messages" class="assistant-messages" aria-live="polite"></div>
       <div id="assistant-files" hidden></div><input id="assistant-file" class="assistant-file-input" type="file" accept="image/*,.pdf,.txt,.md,.doc,.docx" tabindex="-1">
       <span id="assistant-preview-archive" hidden></span><span id="assistant-direct-archive" hidden></span>
       <div id="assistant-sticker-panel" class="assistant-sticker-panel" hidden></div>
-      <form id="assistant-form" class="assistant-composer"><button id="assistant-upload" class="composer-icon" type="button" aria-label="上传文件" title="上传文件">+</button><button id="assistant-stickers" class="composer-icon" type="button" aria-label="表情包" title="表情包">☺</button><label class="sr-only" for="assistant-input">给助手发送消息</label><textarea id="assistant-input" rows="2" maxlength="8000" placeholder="和助手说点什么…" required></textarea><button class="primary" type="submit">发送</button></form>
+      <form id="assistant-form" class="assistant-composer"><label class="sr-only" for="assistant-input">给助手发送消息</label><textarea id="assistant-input" rows="2" maxlength="8000" placeholder="和助手说点什么…" required></textarea><button id="assistant-stickers" class="composer-icon" type="button" aria-label="表情包" title="表情包">☺</button><button id="assistant-upload" class="composer-icon" type="button" aria-label="上传文件" title="上传文件">+</button><button class="primary" type="submit">发送</button></form>
     </section>
   </main>
 
