@@ -181,11 +181,11 @@ git add assets/stickers/manifest.json js/assistant-tools.js tests/assistant-tool
 git commit -m "feat: add local assistant input tools"
 ```
 
-### Task 6: 部署与浏览器验收
+### Task 6: 正式网站部署与浏览器验收
 
 **Files:**
 - Generated: `cloudbase-site-dist/**`
-- Deploy target: CloudBase `assistant-test`
+- Deploy target: 现有正式 EdgeOne 网站
 
 - [ ] **Step 1: 构建并扫描**
 
@@ -193,9 +193,9 @@ Run: `npm run build:cloudbase-site`
 
 扫描产物，确认不含 `.assistant-secrets`、`MODEL_API_KEY`、`SESSION_SECRET`、`OWNER_ACCESS_CODE_HASH`、访问码或令牌。
 
-- [ ] **Step 2: 部署同一测试网址**
+- [ ] **Step 2: 部署正式网站**
 
-把 `cloudbase-site-dist` 上传到 CloudBase `assistant-test` 路径，不修改正式 EdgeOne 站点。
+使用现有 EdgeOne Pages 项目的部署方式发布完整静态网页，保持页面的助手 API 指向当前 CloudBase 后台。发布前确认正式来源仍在 CloudBase `ALLOWED_ORIGINS` 中，不修改 EdgeOne KV 或切换数据中转站。
 
 - [ ] **Step 3: 桌面浏览器验收**
 
@@ -209,5 +209,4 @@ Run: `npm run build:cloudbase-site`
 
 Run: `npm test`
 
-Expected: 0 failures，Git 工作树干净，测试网址返回 200。
-
+Expected: 0 failures，Git 工作树干净，正式网址返回 200，AI 对话仍能连接 CloudBase。
