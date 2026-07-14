@@ -1,4 +1,4 @@
-const AVATAR_KEY = "yuan-assistant-avatar";
+﻿const AVATAR_KEY = "yuan-assistant-avatar";
 
 export function createAssistantPreferences(storage = localStorage) {
   return {
@@ -64,21 +64,8 @@ export function initAssistantTools({ root = document, status, storage = localSto
     avatarFile.value = "";
   });
 
-  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const speech = createSpeechController({
-    Recognition,
-    getValue: () => input.value,
-    setValue: (value) => { input.value = value; input.focus(); },
-    onState: (state) => {
-      if (state === "listening") status.textContent = "正在听你说话…";
-      if (state === "unsupported") status.textContent = "当前浏览器不支持按住说话，请使用输入法麦克风";
-      if (state === "error") status.textContent = "没有识别清楚，请再试一次";
-    },
-  });
-  const mic = root.querySelector("#assistant-mic");
-  if (!speech.supported) mic.title = "请使用输入法麦克风";
-  mic.addEventListener("pointerdown", (event) => { event.preventDefault(); speech.start(); });
-  for (const name of ["pointerup", "pointercancel", "pointerleave"]) mic.addEventListener(name, () => speech.stop());
+  const assistantFile = root.querySelector("#assistant-file");
+  root.querySelector("#assistant-upload").addEventListener("click", () => assistantFile.click());
 
   const stickerButton = root.querySelector("#assistant-stickers");
   const stickerPanel = root.querySelector("#assistant-sticker-panel");

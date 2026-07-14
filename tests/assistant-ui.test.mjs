@@ -156,3 +156,17 @@ test("assistant avatar belongs to AI message rows instead of the heading", async
   assert.match(css, /\.assistant-message-row\.user/);
   assert.match(css, /\.assistant-message-row\.assistant/);
 });
+
+test("assistant composer uses a plus button for file upload instead of mic", async () => {
+  const [html, tools] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-tools.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(html, /id="assistant-mic"|按住说话|鎸変綇璇磋瘽/);
+  assert.match(html, /id="assistant-upload"/);
+  assert.match(html, /aria-label="上传文件"|aria-label="涓婁紶鏂囦欢"/);
+  assert.match(html, />\+<\/button>/);
+  assert.match(tools, /#assistant-upload/);
+  assert.match(tools, /assistantFile\.click\(\)/);
+});
