@@ -8,3 +8,4 @@ node_modules/
 !.env.example
 .assistant-secrets/
 .assistant-sync-state/
+cloudbase-dist/

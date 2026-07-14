@@ -1,0 +1,19 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "yuan-assistant-test-d2bd198841e7",
+  "functionRoot": "cloudbase-dist",
+  "functions": [
+    {
+      "name": "yuan-relay",
+      "runtime": "Nodejs20.19",
+      "timeout": 20,
+      "memorySize": 256,
+      "description": "Temporary relay for Yuan personal assistant",
+      "envVariables": {
+        "TCB_ENV": "yuan-assistant-test-d2bd198841e7",
+        "RELAY_COLLECTION": "yuan_relay_records",
+        "ALLOWED_ORIGINS": "https://yuan-personal-assistant.edgeone.dev,http://127.0.0.1:4173,http://localhost:4173"
+      }
+    }
+  ]
+}
