@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { createAssistantPreferences, createSpeechController, emptyStickerMessage } from "../js/assistant-tools.js";
+import { assistantAvatarSource, createAssistantPreferences, createSpeechController, emptyStickerMessage } from "../js/assistant-tools.js";
 
 test("assistant avatar preference stays in browser storage", () => {
   const data = new Map();
@@ -12,6 +12,11 @@ test("assistant avatar preference stays in browser storage", () => {
   preferences.setAvatar("data:image/webp;base64,AAAA");
   assert.equal(preferences.avatar(), "data:image/webp;base64,AAAA");
   assert.throws(() => preferences.setAvatar("data:text/plain;base64,AAAA"), /图片/);
+});
+
+test("assistant avatar uses the app icon until a local picture is selected", () => {
+  assert.equal(assistantAvatarSource({ avatar: () => null }), "./icons/icon-192.png");
+  assert.equal(assistantAvatarSource({ avatar: () => "data:image/webp;base64,AAAA" }), "data:image/webp;base64,AAAA");
 });
 
 test("speech controller starts, stops and appends Chinese transcript", () => {

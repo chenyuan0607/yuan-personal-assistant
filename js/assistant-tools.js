@@ -10,6 +10,10 @@ export function createAssistantPreferences(storage = localStorage) {
   };
 }
 
+export function assistantAvatarSource(preferences) {
+  return preferences.avatar() || "./icons/icon-192.png";
+}
+
 export function createSpeechController({ Recognition, getValue, setValue, onState = () => {} }) {
   if (!Recognition) return { supported: false, start() { onState("unsupported"); }, stop() {} };
   const recognition = new Recognition();
@@ -51,14 +55,11 @@ async function resizeAvatar(file) {
 export function initAssistantTools({ root = document, status, storage = localStorage, fetchImpl = fetch } = {}) {
   const input = root.querySelector("#assistant-input");
   const preferences = createAssistantPreferences(storage);
-  const avatar = root.querySelector("#assistant-avatar-image");
   const avatarFile = root.querySelector("#assistant-avatar-file");
-  const savedAvatar = preferences.avatar();
-  if (savedAvatar) { avatar.src = savedAvatar; avatar.hidden = false; }
-  root.querySelector("#assistant-avatar").addEventListener("click", () => avatarFile.click());
   avatarFile.addEventListener("change", async () => {
     try {
-      const value = await resizeAvatar(avatarFile.files?.[0]); preferences.setAvatar(value); avatar.src = value; avatar.hidden = false;
+      const value = await resizeAvatar(avatarFile.files?.[0]); preferences.setAvatar(value);
+      root.querySelectorAll(".assistant-avatar-image").forEach((image) => { image.src = value; });
     } catch (error) { status.textContent = error.message; }
     avatarFile.value = "";
   });
@@ -90,4 +91,9 @@ export function initAssistantTools({ root = document, status, storage = localSto
       stickerPanel.dataset.loaded = "true";
     } catch { stickerPanel.textContent = "表情包素材暂时无法读取"; }
   });
+
+  return {
+    getAvatarSource: () => assistantAvatarSource(preferences),
+    chooseAvatar: () => avatarFile.click(),
+  };
 }

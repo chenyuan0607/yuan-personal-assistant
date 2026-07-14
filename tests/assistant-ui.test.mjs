@@ -123,3 +123,19 @@ test("assistant shows thinking state without archive actions", async () => {
   assert.match(script, /正在思考中/);
   assert.doesNotMatch(script, /等待同步|正在发送/);
 });
+
+test("assistant avatar belongs to AI message rows instead of the heading", async () => {
+  const [html, script, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(html, /assistant-heading[^>]*>[\s\S]{0,400}id="assistant-avatar"/);
+  assert.match(html, /id="assistant-avatar-file"[^>]+hidden/);
+  assert.match(script, /message-row/);
+  assert.match(script, /message\.role === "assistant"/);
+  assert.match(script, /createAvatarButton/);
+  assert.match(css, /\.assistant-message-row\.user/);
+  assert.match(css, /\.assistant-message-row\.assistant/);
+});

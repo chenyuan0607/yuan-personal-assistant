@@ -7,9 +7,9 @@ test("focus mode hides the bottom navigation when the hidden attribute is set", 
   assert.match(styles, /\.bottom-nav\[hidden\]\{display:none\}/);
 });
 
-test("service worker cache version changes with the pomodoro shell", async () => {
+test("service worker cache version includes the latest assistant shell", async () => {
   const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
-  assert.match(worker, /yuan-assistant-v10/);
+  assert.match(worker, /yuan-assistant-v11/);
 });
 
 test("result confirmation cannot be dismissed without choosing an outcome", async () => {

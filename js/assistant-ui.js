@@ -40,8 +40,23 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const fileList = root.querySelector("#assistant-files");
   const memoryStatus = root.querySelector("#assistant-memory-status");
   const archiveStatus = root.querySelector("#assistant-archive-status");
-  initAssistantTools({ root, status });
+  const assistantTools = initAssistantTools({ root, status });
   let serverMessages = [];
+
+  const createAvatarButton = () => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "assistant-avatar";
+    button.setAttribute("aria-label", "更换 AI 头像");
+    button.title = "更换 AI 头像";
+    button.addEventListener("click", assistantTools.chooseAvatar);
+    const image = document.createElement("img");
+    image.className = "assistant-avatar-image";
+    image.src = assistantTools.getAvatarSource();
+    image.alt = "AI 助手头像";
+    button.append(image);
+    return button;
+  };
 
   const openLogin = () => { if (!dialog.open) dialog.showModal(); };
   const render = () => {
@@ -51,6 +66,8 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     }));
     list.replaceChildren(...[...serverMessages, ...pending].map((raw) => {
       const message = formatMessage(raw);
+      const row = document.createElement("div");
+      row.className = `assistant-message-row ${message.role}`;
       const article = document.createElement("article");
       article.className = `assistant-message ${message.role}${raw.pending ? " pending" : ""}`;
       const text = document.createElement("div"); text.textContent = message.content; article.append(text);
@@ -64,7 +81,9 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
         }
         article.append(sources);
       }
-      return article;
+      if (message.role === "assistant") row.append(createAvatarButton());
+      row.append(article);
+      return row;
     }));
     list.scrollTop = list.scrollHeight;
   };
