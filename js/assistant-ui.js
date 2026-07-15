@@ -3,6 +3,8 @@ import { createBrowserStore } from "./assistant-store.js";
 import { formatChatTimeLabel, formatMessage, shouldShowTimeDivider } from "./assistant-view.js";
 import { initAssistantTools } from "./assistant-tools.js";
 
+const TITLE_KEY = "yuan-assistant-title";
+
 export function localDate(value = new Date()) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
 }
@@ -86,12 +88,13 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const dialog = root.querySelector("#assistant-login-dialog");
   const status = root.querySelector("#assistant-status");
   const list = root.querySelector("#assistant-messages");
+  const title = root.querySelector("#assistant-title");
   const fileList = root.querySelector("#assistant-files");
   const memoryStatus = root.querySelector("#assistant-memory-status");
   const archiveStatus = root.querySelector("#assistant-archive-status");
   const enqueueText = async (text) => {
     store.enqueue({ id: crypto.randomUUID(), text, date: localDate(), createdAt: new Date().toISOString() });
-    status.textContent = "正在思考中";
+    status.textContent = "对方正在输入···";
     render();
     await refresh();
   };
@@ -99,6 +102,11 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   let serverMessages = [];
   const menuButton = root.querySelector("#assistant-menu");
   const showAssistantMenu = () => onMenu("assistant-menu-view");
+  const titleStorage = root.defaultView?.localStorage || localStorage;
+  const applyAssistantTitle = () => {
+    title.textContent = titleStorage.getItem(TITLE_KEY) || "缘的小助手";
+  };
+  applyAssistantTitle();
 
   const createAvatarButton = () => {
     const stack = document.createElement("div");
@@ -124,7 +132,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const createThinkingMessage = (pending) => pending.length ? [{
     id: "assistant-thinking",
     role: "assistant",
-    content: "正在思考中…",
+    content: "对方正在输入···",
     date: localDate(),
     createdAt: new Date().toISOString(),
     sources: [],
@@ -168,7 +176,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       } else {
         const text = document.createElement("div"); text.textContent = message.content; article.append(text);
       }
-      if (raw.pending && message.role === "assistant") { const note = document.createElement("small"); note.textContent = "正在思考中"; article.append(note); }
+      if (raw.pending && message.role === "assistant") { const note = document.createElement("small"); note.textContent = "对方正在输入···"; article.append(note); }
       if (message.sources.length) {
         const sources = document.createElement("div"); sources.className = "assistant-sources";
         for (const source of message.sources) {
@@ -261,6 +269,29 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
     catch (error) { status.textContent = error.message; }
   });
   menuButton.addEventListener("click", showAssistantMenu);
+  root.querySelector("#assistant-menu-title")?.addEventListener("click", () => {
+    const value = root.defaultView?.prompt("给聊天顶部改个备注", title.textContent)?.trim();
+    if (!value) return;
+    titleStorage.setItem(TITLE_KEY, value.slice(0, 24));
+    applyAssistantTitle();
+  });
+  root.querySelector("#assistant-menu-notify")?.addEventListener("click", async () => {
+    try {
+      if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("这个浏览器暂时不支持主动通知");
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("你还没有允许通知权限");
+      const registration = await navigator.serviceWorker.ready;
+      const { publicKey } = await api.notificationKey();
+      if (!publicKey) throw new Error("主动通知还没有配置推送密钥");
+      const key = Uint8Array.from(atob(publicKey.replace(/-/g, "+").replace(/_/g, "/")), (char) => char.charCodeAt(0));
+      const subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+      await api.saveNotificationSubscription(subscription.toJSON());
+      await api.sendTestNotification().catch(() => null);
+      status.textContent = "主动通知已开启";
+    } catch (error) {
+      status.textContent = error.message || "主动通知暂时无法开启";
+    }
+  });
   root.querySelector("#assistant-menu-avatar").addEventListener("click", () => {
     assistantTools.chooseAvatar();
   });

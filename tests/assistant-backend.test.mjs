@@ -18,12 +18,68 @@ import filesHandler from "../edge-functions/api/files.js";
 import feedbackHandler from "../edge-functions/api/feedback.js";
 import codexHandler, { saveMemory } from "../edge-functions/api/codex.js";
 import { selectDeletable } from "../edge-functions/api/cleanup.js";
+import notificationsHandler from "../edge-functions/api/notifications.js";
 
 test("record keys are stable and owner scoped", () => {
   assert.equal(chatKey("owner", "2026-07-13", "m-1"), "chat_owner_2026_07_13_m_1");
   assert.equal(archiveKey("owner", "2026-07-13"), "archive_owner_2026_07_13");
   assert.equal(fileKey("owner", "f-1"), "file_owner_f_1");
   assert.match(chatKey("owner", "2026-07-13", "m-1"), /^[A-Za-z0-9_]+$/);
+});
+
+test("device can register push notification subscriptions and test send cleans expired endpoints", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const sent = [];
+  const env = {
+    SESSION_SECRET: "secret",
+    VAPID_PUBLIC_KEY: "public-key",
+    VAPID_PRIVATE_KEY: "private-key",
+    WEB_PUSH_IMPL: {
+      setVapidDetails(subject, publicKey, privateKey) {
+        assert.equal(subject, "mailto:qingqing@example.invalid");
+        assert.equal(publicKey, "public-key");
+        assert.equal(privateKey, "private-key");
+      },
+      async sendNotification(subscription, payload) {
+        sent.push({ subscription, payload: JSON.parse(payload) });
+        if (subscription.endpoint.includes("expired")) {
+          const error = new Error("gone");
+          error.statusCode = 410;
+          throw error;
+        }
+      },
+    },
+  };
+  const token = await issueToken({ sub: "owner", kind: "device", deviceName: "phone", exp: 9999999999 }, env.SESSION_SECRET);
+  const headers = { authorization: `Bearer ${token}`, "content-type": "application/json" };
+  try {
+    const keyResponse = await notificationsHandler({ env, request: new Request("https://app.example/api/notifications", { headers: { authorization: `Bearer ${token}` } }) });
+    assert.equal((await keyResponse.json()).publicKey, "public-key");
+
+    const active = { endpoint: "https://push.example/active", keys: { p256dh: "p256dh", auth: "auth" } };
+    const expired = { endpoint: "https://push.example/expired", keys: { p256dh: "p256dh", auth: "auth" } };
+    assert.equal((await notificationsHandler({ env, request: new Request("https://app.example/api/notifications?action=subscribe", { method: "POST", headers, body: JSON.stringify({ subscription: active }) }) })).status, 200);
+    assert.equal((await notificationsHandler({ env, request: new Request("https://app.example/api/notifications?action=subscribe", { method: "POST", headers, body: JSON.stringify({ subscription: expired }) }) })).status, 200);
+    assert.equal([...data.keys()].filter((key) => key.startsWith("push_owner_")).length, 2);
+
+    const testResponse = await notificationsHandler({ env, request: new Request("https://app.example/api/notifications?action=test", { method: "POST", headers, body: "{}" }) });
+    const body = await testResponse.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.sent, 1);
+    assert.equal(body.removed, 1);
+    assert.equal(sent.length, 2);
+    assert.equal([...data.keys()].filter((key) => key.startsWith("push_owner_")).length, 1);
+  } finally {
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
 });
 
 test("messages reject empty or oversized text", () => {

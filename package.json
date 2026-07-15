@@ -19,6 +19,7 @@
   "dependencies": {
     "@cloudbase/node-sdk": "^3.18.3",
     "@edgeone/pages-blob": "latest",
+    "web-push": "^3.6.7",
     "ws": "^8.21.0"
   },
   "devDependencies": {

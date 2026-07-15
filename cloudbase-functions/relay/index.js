@@ -6,6 +6,7 @@ import chatHandler from "../../edge-functions/api/chat.js";
 import feedbackHandler from "../../edge-functions/api/feedback.js";
 import codexHandler from "../../edge-functions/api/codex.js";
 import filesHandler from "../../edge-functions/api/files.js";
+import notificationsHandler from "../../edge-functions/api/notifications.js";
 import { createCloudBaseBlob, createCloudBaseStore } from "./storage.js";
 
 const app = cloudbase.init({ env: process.env.TCB_ENV || cloudbase.SYMBOL_CURRENT_ENV });
@@ -22,6 +23,7 @@ const handlers = new Map([
   ["/api/feedback", feedbackHandler],
   ["/api/codex", codexHandler],
   ["/api/files", filesHandler],
+  ["/api/notifications", notificationsHandler],
 ]);
 
 const env = new Proxy({}, {
@@ -91,7 +93,10 @@ export function createRelayServer() {
         return;
       }
       const pathname = url.pathname.replace(/\/+$/, "") || "/";
-      const handler = handlers.get(pathname) || (pathname === "/" ? filesHandler : null);
+      const notificationAction = url.searchParams.get("action");
+      const handler = handlers.get(pathname)
+        || (pathname === "/" && ["key", "subscribe", "test"].includes(notificationAction) ? notificationsHandler : null)
+        || (pathname === "/" ? filesHandler : null);
       if (!handler) {
         await sendResponse(res, Response.json({ ok: false, error: "Not Found" }, { status: 404 }), origin);
         return;

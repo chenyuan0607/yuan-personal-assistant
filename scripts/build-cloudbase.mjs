@@ -12,12 +12,12 @@ await build({
   platform: "node",
   target: "node20",
   format: "esm",
-  external: ["@cloudbase/node-sdk"],
+  external: ["@cloudbase/node-sdk", "web-push"],
 });
 await writeFile(new URL("package.json", output), `${JSON.stringify({
   name: "yuan-cloudbase-relay",
   private: true,
   type: "module",
-  dependencies: { "@cloudbase/node-sdk": "3.18.3", ws: "8.18.3" },
+  dependencies: { "@cloudbase/node-sdk": "3.18.3", "web-push": "3.6.7", ws: "8.18.3" },
 }, null, 2)}\n`, "utf8");
 await writeFile(new URL("scf_bootstrap", output), "#!/bin/bash\nnode index.js\n", "utf8");

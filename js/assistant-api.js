@@ -29,5 +29,8 @@ export function createAssistantApi({ baseUrl, getToken, fetchImpl = fetch }) {
     updateFile: (id, action) => request("/api/files", { method: "PATCH", body: JSON.stringify({ id, action }) }),
     saveFeedback: (record) => request("/api/feedback", { method: "POST", body: JSON.stringify(record) }),
     listFeedback: (date) => request(`/api/feedback?date=${encodeURIComponent(date)}`),
+    notificationKey: () => request("/api/notifications?action=key"),
+    saveNotificationSubscription: (subscription) => request("/api/notifications?action=subscribe", { method: "POST", body: JSON.stringify({ subscription }) }),
+    sendTestNotification: () => request("/api/notifications?action=test", { method: "POST", body: "{}" }),
   };
 }

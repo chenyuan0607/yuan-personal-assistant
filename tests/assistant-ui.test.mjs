@@ -234,7 +234,7 @@ test("assistant shows thinking state without archive actions", async () => {
   assert.match(html, /<span id="assistant-preview-archive" hidden><\/span>/);
   assert.match(html, /<span id="assistant-direct-archive" hidden><\/span>/);
   assert.doesNotMatch(script, /assistant-(preview|direct)-archive/);
-  assert.match(script, /正在思考中/);
+  assert.match(script, /对方正在输入···/);
   assert.doesNotMatch(script, /等待同步|正在发送/);
 });
 
@@ -308,6 +308,31 @@ test("assistant chat uses a WeChat-like roof page instead of avatar actions", as
   assert.match(css, /\.assistant-message\.user\{[^}]*background:#95ec69/);
 });
 
+test("assistant roof page can rename the chat title and enable push notifications", async () => {
+  const [html, script, apiScript, worker] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-api.js", import.meta.url), "utf8"),
+    readFile(new URL("../service-worker.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(html, /id="assistant-title"/);
+  assert.match(html, /id="assistant-menu-title"/);
+  assert.match(html, /修改备注/);
+  assert.match(html, /id="assistant-menu-notify"/);
+  assert.match(html, /主动通知/);
+  assert.match(script, /yuan-assistant-title/);
+  assert.match(script, /prompt\(/);
+  assert.match(script, /Notification\.requestPermission/);
+  assert.match(script, /pushManager\.subscribe/);
+  assert.match(script, /api\.saveNotificationSubscription/);
+  assert.match(apiScript, /notificationKey: \(\) => request\("\/api\/notifications\?action=key"\)/);
+  assert.match(apiScript, /saveNotificationSubscription/);
+  assert.match(apiScript, /sendTestNotification/);
+  assert.match(worker, /addEventListener\("push"/);
+  assert.match(worker, /addEventListener\("notificationclick"/);
+});
+
 test("assistant keeps the latest thinking message above the fixed composer", async () => {
   const [script, css] = await Promise.all([
     readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
@@ -329,7 +354,7 @@ test("assistant renders an AI thinking bubble while a sent message is pending", 
 
   assert.match(script, /createThinkingMessage/);
   assert.match(script, /role: "assistant"/);
-  assert.match(script, /content: "正在思考中…"/);
+  assert.match(script, /content: "对方正在输入···"/);
 });
 
 test("assistant renders sticker messages as local images", async () => {
