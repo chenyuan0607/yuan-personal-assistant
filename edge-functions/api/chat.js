@@ -115,7 +115,15 @@ export default async function onRequest({ request, env }) {
       return json({ ok: true, messages: [userRecord, assistantRecord] });
     }
     const memory = await store.get(memoryLatestKey(owner.sub)) || "";
-    const sources = needsSearch(userText) ? await searchWeb(userText, env) : [];
+    let sources = [];
+    let searchNote = "";
+    if (needsSearch(userText)) {
+      try {
+        sources = await searchWeb(userText, env);
+      } catch {
+        searchNote = "联网搜索暂时不可用；请基于已有信息回答，并明确提醒用户最新情况尚未确认。";
+      }
+    }
     let answer;
     if (fileRecord) {
       const objects = blob(env);
@@ -126,7 +134,7 @@ export default async function onRequest({ request, env }) {
       const imageSummary = await callVisionModel(buildImageUnderstandingMessages({ imageUrl, userText }), env);
       answer = await callModel(buildImageReplyMessages({ memory, history, userText, imageSummary, currentTime: currentTimeText() }), env);
     } else {
-      answer = await callModel(buildModelMessages({ memory, history, userText, sources, currentTime: currentTimeText() }), env);
+      answer = await callModel(buildModelMessages({ memory, history, userText, sources, searchNote, currentTime: currentTimeText() }), env);
     }
     const assistantRecord = { id: assistantId, role: "assistant", content: answer, date, createdAt: new Date().toISOString(), sources };
     await store.put(assistantKey, JSON.stringify(assistantRecord));

@@ -10,7 +10,7 @@ import {
 } from "../edge-functions/_lib/records.js";
 import { issueToken, sha256, verifyToken } from "../edge-functions/_lib/crypto.js";
 import { buildArchiveMessages, buildModelMessages } from "../edge-functions/_lib/model.js";
-import { needsSearch } from "../edge-functions/_lib/search.js";
+import { needsSearch, searchWeb } from "../edge-functions/_lib/search.js";
 import { listJson } from "../edge-functions/_lib/storage.js";
 import { feedbackKey, validateFeedback } from "../edge-functions/_lib/feedback.js";
 import chatHandler, { currentTimeText } from "../edge-functions/api/chat.js";
@@ -53,6 +53,99 @@ test("search is controlled by current-information intent and user override", () 
   assert.equal(needsSearch("不要联网，只根据你记得的回答"), false);
   assert.equal(needsSearch("我今天心情不好"), false);
   assert.equal(needsSearch("现在DeepSeek价格是多少"), true);
+  assert.equal(needsSearch("今天抖音热点有哪些"), true);
+  assert.equal(needsSearch("小红书最近在流行什么"), true);
+  assert.equal(needsSearch("这个报名截止了吗"), true);
+  assert.equal(needsSearch("我有点累怎么办"), false);
+  assert.equal(needsSearch("不用搜索，今天抖音热点有哪些"), false);
+});
+
+test("search adapter uses configured provider or default lightweight web search", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), options });
+    if (String(url).startsWith("https://search.example")) {
+      assert.equal(options.method, "POST");
+      assert.equal(options.headers.authorization, "Bearer search-key");
+      assert.deepEqual(JSON.parse(options.body), { query: "今天抖音热点", limit: 5 });
+      return new Response(JSON.stringify({ results: [{ title: "热榜", url: "https://example.com/a", snippet: "摘要", date: "2026-07-15" }] }), {
+        headers: { "content-type": "application/json" },
+      });
+    }
+    assert.match(String(url), /^https:\/\/s\.jina\.ai\//);
+    assert.equal(options.headers.accept, "application/json");
+    return new Response(JSON.stringify({ data: [{ title: "默认搜索", url: "https://example.com/b", content: "内容", date: "2026-07-15" }] }), {
+      headers: { "content-type": "application/json" },
+    });
+  };
+  try {
+    assert.deepEqual(await searchWeb("今天抖音热点", { SEARCH_ENDPOINT: "https://search.example/query", SEARCH_API_KEY: "search-key" }), [
+      { title: "热榜", url: "https://example.com/a", snippet: "摘要", date: "2026-07-15" },
+    ]);
+    assert.deepEqual(await searchWeb("今天抖音热点", {}), [
+      { title: "默认搜索", url: "https://example.com/b", snippet: "内容", date: "2026-07-15" },
+    ]);
+    assert.equal(calls.length, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("default search falls back to a public search page when lightweight search fails", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).startsWith("https://s.jina.ai/")) {
+      return new Response("bad gateway", { status: 502 });
+    }
+    return new Response(`
+      <html>
+        <li class="b_algo">
+          <h2><a href="https://example.com/hot">抖音热榜入口</a></h2>
+          <p>今天抖音热点摘要。</p>
+        </li>
+      </html>
+    `, { headers: { "content-type": "text/html" } });
+  };
+  try {
+    const results = await searchWeb("今天抖音热点有哪些", {});
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1], `https://www.bing.com/search?q=${encodeURIComponent("今天抖音热点有哪些")}`);
+    assert.deepEqual(results, [{ title: "抖音热榜入口", url: "https://example.com/hot", snippet: "今天抖音热点摘要。", date: "" }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("default search falls back to a domestic search page when public search page fails", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).startsWith("https://s.jina.ai/") || String(url).startsWith("https://www.bing.com/search")) {
+      return new Response("bad gateway", { status: 502 });
+    }
+    return new Response(`
+      <html>
+        <li class="res-list">
+          <h3 class="res-title">
+            <a href="https://www.so.com/link?m=test" data-mdurl="https://www.douyin.com/hot">今日抖音热点榜 - 抖音</a>
+          </h3>
+          <p class="res-desc"><span>2026年7月15日 - </span>抖音热点摘要。</p>
+        </li>
+      </html>
+    `, { headers: { "content-type": "text/html" } });
+  };
+  try {
+    const results = await searchWeb("今天抖音热点有哪些", {});
+    assert.equal(calls.length, 3);
+    assert.equal(calls[2], `https://www.so.com/s?q=${encodeURIComponent("今天抖音热点有哪些")}`);
+    assert.deepEqual(results, [{ title: "今日抖音热点榜 - 抖音", url: "https://www.douyin.com/hot", snippet: "2026年7月15日 - 抖音热点摘要。", date: "" }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test("model messages include compact memory and archive prompt keeps the date", () => {
@@ -197,6 +290,110 @@ test("exact time questions are answered by the backend Beijing clock without mod
     assert.equal(modelCalls, 0);
     assert.match(body.messages.at(-1).content, /北京时间/);
     assert.doesNotMatch(body.messages.at(-1).content, /wrong/);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
+test("chat searches for current热点 questions but not casual support", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options = {}) => {
+    calls.push({ url: String(url), body: options.body ? JSON.parse(options.body) : null });
+    if (String(url) === "https://search.example/query") {
+      return new Response(JSON.stringify({ results: [{ title: "抖音热榜", url: "https://example.com/hot", snippet: "今天热榜摘要", date: "2026-07-15" }] }), {
+        headers: { "content-type": "application/json" },
+      });
+    }
+    const body = JSON.parse(options.body);
+    const system = body.messages[0].content;
+    return new Response(JSON.stringify({ choices: [{ message: { content: system.includes("抖音热榜") ? "已结合热榜回答" : "不联网陪你聊" } }] }), {
+      headers: { "content-type": "application/json" },
+    });
+  };
+  try {
+    const env = {
+      SESSION_SECRET: "secret",
+      MODEL_ENDPOINT: "https://model.example",
+      MODEL_API_KEY: "key",
+      MODEL_NAME: "model",
+      SEARCH_ENDPOINT: "https://search.example/query",
+      SEARCH_API_KEY: "search-key",
+    };
+    const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+    const requestChat = (text, clientMessageId) => chatHandler({
+      env,
+      request: new Request("https://app.example/api/chat?date=2026-07-15", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ text, clientMessageId }),
+      }),
+    });
+    const hot = await (await requestChat("今天抖音热点有哪些", "hot-00000001")).json();
+    const casual = await (await requestChat("我有点累怎么办", "talk-00000001")).json();
+    assert.equal(calls.filter((item) => item.url === "https://search.example/query").length, 1);
+    assert.equal(hot.messages.at(-1).content, "已结合热榜回答");
+    assert.deepEqual(hot.messages.at(-1).sources, [{ title: "抖音热榜", url: "https://example.com/hot", snippet: "今天热榜摘要", date: "2026-07-15" }]);
+    assert.equal(casual.messages.at(-1).content, "不联网陪你聊");
+    assert.deepEqual(casual.messages.at(-1).sources, []);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
+test("chat keeps answering when web search is temporarily unavailable", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options = {}) => {
+    if (String(url) === "https://search.example/query") {
+      return new Response(JSON.stringify({ error: "down" }), { status: 503 });
+    }
+    const body = JSON.parse(options.body);
+    assert.match(body.messages[0].content, /联网搜索暂时不可用/);
+    return new Response(JSON.stringify({ choices: [{ message: { content: "我先按已有信息回答，并提醒你最新情况未确认" } }] }), {
+      headers: { "content-type": "application/json" },
+    });
+  };
+  try {
+    const env = {
+      SESSION_SECRET: "secret",
+      MODEL_ENDPOINT: "https://model.example",
+      MODEL_API_KEY: "key",
+      MODEL_NAME: "model",
+      SEARCH_ENDPOINT: "https://search.example/query",
+    };
+    const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+    const response = await chatHandler({
+      env,
+      request: new Request("https://app.example/api/chat?date=2026-07-15", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ text: "今天抖音热点有哪些", clientMessageId: "hot-00000002" }),
+      }),
+    });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.equal(body.messages.at(-1).content, "我先按已有信息回答，并提醒你最新情况未确认");
+    assert.deepEqual(body.messages.at(-1).sources, []);
   } finally {
     globalThis.fetch = originalFetch;
     delete globalThis.YUAN_ASSISTANT_KV;
