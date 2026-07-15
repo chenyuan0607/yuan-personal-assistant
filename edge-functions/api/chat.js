@@ -40,6 +40,8 @@ export const currentTimeText = (now = new Date()) => {
 };
 const exactTimeQuestion = (text) => /(现在几点|当前时间|现在时间|几点了|今天几号|今天日期|今天是几号)/.test(text);
 const directTimeAnswer = (text, nowText) => `现在是${nowText}。`;
+const identityQuestion = (text) => /^(你是谁|你叫什么|你叫啥|介绍一下你自己|自我介绍|你是什么)$/.test(String(text || "").trim().replace(/[？?。.!！\s]/g, ""));
+const directIdentityAnswer = () => "我是青青呀，是陪在你身边的小助手，也是更像女朋友一样陪你聊天、鼓励你、帮你整理东西的那个人。你平时直接跟我说事就好，难过了也可以找我，我会好好听你说。";
 
 async function getJson(store, key) {
   return store.get(key, { type: "json" });
@@ -125,6 +127,11 @@ export default async function onRequest({ request, env }) {
     }
     if (!fileRecord && exactTimeQuestion(userText)) {
       const assistantRecord = { id: assistantId, role: "assistant", content: directTimeAnswer(userText, currentTimeText()), date, createdAt: new Date().toISOString(), sources: [] };
+      await store.put(assistantKey, JSON.stringify(assistantRecord));
+      return json({ ok: true, messages: [userRecord, assistantRecord] });
+    }
+    if (!fileRecord && identityQuestion(userText)) {
+      const assistantRecord = { id: assistantId, role: "assistant", content: directIdentityAnswer(), date, createdAt: new Date().toISOString(), sources: [] };
       await store.put(assistantKey, JSON.stringify(assistantRecord));
       return json({ ok: true, messages: [userRecord, assistantRecord] });
     }
