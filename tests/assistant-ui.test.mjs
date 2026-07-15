@@ -278,18 +278,21 @@ test("assistant composer uses a plus button for file upload instead of mic", asy
   assert.match(css, /\.assistant-file-input/);
 });
 
-test("assistant chat leaves enough safe space above the fixed composer and bottom nav", async () => {
+test("assistant composer overlays chat without a reserved gray spacer", async () => {
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
-  assert.match(css, /\.assistant-view\{[^}]*padding:58px 0 150px/);
-  assert.match(css, /\.assistant-messages\{[^}]*height:calc\(100vh - 240px\)/);
-  assert.match(css, /\.assistant-messages\{[^}]*max-height:calc\(100vh - 240px\)/);
-  assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 8px/);
-  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:84px/);
+  assert.match(css, /\.assistant-view\{[^}]*padding:58px 0 64px/);
+  assert.match(css, /\.assistant-messages\{[^}]*height:calc\(100vh - 128px\)/);
+  assert.match(css, /\.assistant-messages\{[^}]*max-height:calc\(100vh - 128px\)/);
+  assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 0/);
+  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:0/);
   assert.match(css, /\.assistant-messages\{[^}]*display:flex/);
   assert.match(css, /\.assistant-messages\{[^}]*flex-direction:column/);
   assert.match(css, /\.assistant-messages::before\{content:"";margin-top:auto\}/);
   assert.match(css, /\.assistant-message-row\{[^}]*flex-shrink:0/);
+  assert.match(css, /\.assistant-composer\{[^}]*padding:0 10px/);
+  assert.match(css, /\.assistant-composer\{[^}]*background:transparent/);
+  assert.doesNotMatch(css, /\.assistant-view\{[^}]*padding:58px 0 1[0-9]{2}px/);
   assert.doesNotMatch(css, /\.assistant-messages\{[^}]*padding:8px 8px 1[0-9]{2}px/);
 });
 
