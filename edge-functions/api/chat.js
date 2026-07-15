@@ -4,6 +4,7 @@ import { archiveKey, chatKey, chatPrefix, deferredLinkMessage, validateMessage }
 import { blob, kv, listJson } from "../_lib/storage.js";
 import { buildArchiveMessages, buildImageReplyMessages, buildImageUnderstandingMessages, buildModelMessages, callModel, callVisionModel } from "../_lib/model.js";
 import { fileKey } from "../_lib/records.js";
+import { feedbackPrefix } from "../_lib/feedback.js";
 import { needsSearch, searchWeb } from "../_lib/search.js";
 
 const memoryLatestKey = (ownerId) => `memory_${ownerId}_latest`;
@@ -42,6 +43,34 @@ const exactTimeQuestion = (text) => /(现在几点|当前时间|现在时间|几
 const directTimeAnswer = (text, nowText) => `现在是${nowText}。`;
 const identityQuestion = (text) => /^(你是谁|你叫什么|你叫啥|介绍一下你自己|自我介绍|你是什么)$/.test(String(text || "").trim().replace(/[？?。.!！\s]/g, ""));
 const directIdentityAnswer = () => "我是青青呀，是陪在你身边的小助手，也是更像女朋友一样陪你聊天、鼓励你、帮你整理东西的那个人。你平时直接跟我说事就好，难过了也可以找我，我会好好听你说。";
+const taskQuestion = (text) => /(今天|今日|现在|当前|任务|进度|完成|做什么|该做|安排|清单)/.test(text) && /(任务|进度|完成|做什么|该做|安排|清单)/.test(text);
+const latestTime = (item) => String(item.completedAt || item.updatedAt || item.receivedAt || item.createdAt || "");
+const taskOutcomeText = (outcome) => outcome === "completed" ? "已完成" : outcome === "unfinished" ? "未完成，待继续" : "未开始";
+
+async function todayTaskContext(store, ownerId, date) {
+  const items = (await listJson(feedbackPrefix(ownerId), store)).filter((item) => item.date === date && (item.kind === "task-plan" || item.kind === "task-result"));
+  const plan = items
+    .filter((item) => item.kind === "task-plan")
+    .sort((a, b) => latestTime(a).localeCompare(latestTime(b)))
+    .at(-1);
+  const results = items
+    .filter((item) => item.kind === "task-result")
+    .sort((a, b) => latestTime(a).localeCompare(latestTime(b)));
+  const latestResult = new Map(results.map((item) => [item.taskId, item]));
+  const tasks = plan?.tasks?.length
+    ? plan.tasks
+    : [...new Map(results.map((item) => [item.taskId, { taskId: item.taskId, title: item.title, plannedMinutes: item.plannedMinutes }])).values()];
+  if (!tasks.length) return `${date} 暂未同步任务清单。如果缘刚打开网页，可以先进入“今天”页让任务清单同步一下。`;
+  const completed = tasks.filter((task) => latestResult.get(task.taskId)?.outcome === "completed").length;
+  const focusedMinutes = Math.round(results.reduce((sum, item) => sum + Number(item.focusedSeconds || 0), 0) / 60);
+  const lines = tasks.map((task, index) => {
+    const result = latestResult.get(task.taskId);
+    const status = taskOutcomeText(result?.outcome);
+    const focused = result ? `，已专注约 ${Math.round(Number(result.focusedSeconds || 0) / 60)} 分钟` : "";
+    return `${index + 1}. ${task.title}（建议 ${task.plannedMinutes || "未设置"} 分钟｜${status}${focused}）`;
+  });
+  return `${date}：已完成 ${completed}/${tasks.length} 项，总专注约 ${focusedMinutes} 分钟。\n${lines.join("\n")}`;
+}
 
 async function getJson(store, key) {
   return store.get(key, { type: "json" });
@@ -136,6 +165,7 @@ export default async function onRequest({ request, env }) {
       return json({ ok: true, messages: [userRecord, assistantRecord] });
     }
     const memory = await store.get(memoryLatestKey(owner.sub)) || "";
+    const taskContext = !fileRecord && taskQuestion(userText) ? await todayTaskContext(store, owner.sub, date) : "";
     let sources = [];
     let searchNote = "";
     if (needsSearch(userText)) {
@@ -156,7 +186,7 @@ export default async function onRequest({ request, env }) {
       const imageSummary = await callVisionModel(buildImageUnderstandingMessages({ imageUrl, userText }), env);
       answer = await callModel(buildImageReplyMessages({ memory, history, userText, imageSummary, currentTime: currentTimeText() }), env);
     } else {
-      answer = await callModel(buildModelMessages({ memory, history, userText, sources, searchNote, currentTime: currentTimeText() }), env);
+      answer = await callModel(buildModelMessages({ memory, history, userText, sources, searchNote, taskContext, currentTime: currentTimeText() }), env);
     }
     const assistantRecord = { id: assistantId, role: "assistant", content: answer, date, createdAt: new Date().toISOString(), sources };
     await store.put(assistantKey, JSON.stringify(assistantRecord));

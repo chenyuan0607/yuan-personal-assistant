@@ -411,6 +411,71 @@ test("identity questions are answered as Qingqing without timestamps or model ca
   }
 });
 
+test("task questions include today's synced task plan and progress", async () => {
+  const data = new Map([
+    ["feedback_owner_task_plan_2026_07_16_plan_2026_07_16", {
+      id: "plan-2026-07-16",
+      kind: "task-plan",
+      date: "2026-07-16",
+      status: "waiting",
+      tasks: [
+        { taskId: "t1", title: "写一句话复盘昨天", plannedMinutes: 5 },
+        { taskId: "t2", title: "检查手机端任务是否正常", plannedMinutes: 3 },
+      ],
+      updatedAt: "2026-07-16T01:00:00Z",
+    }],
+    ["feedback_owner_task_result_2026_07_16_r1", {
+      id: "r1",
+      kind: "task-result",
+      date: "2026-07-16",
+      status: "waiting",
+      taskId: "t1",
+      title: "写一句话复盘昨天",
+      plannedMinutes: 5,
+      focusedSeconds: 300,
+      outcome: "completed",
+      completedAt: "2026-07-16T02:00:00Z",
+    }],
+  ]);
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (_url, options = {}) => {
+    const body = JSON.parse(options.body);
+    const system = body.messages[0].content;
+    assert.match(system, /今日任务上下文/);
+    assert.match(system, /写一句话复盘昨天/);
+    assert.match(system, /已完成/);
+    assert.match(system, /检查手机端任务是否正常/);
+    assert.match(system, /未开始/);
+    return new Response(JSON.stringify({ choices: [{ message: { content: "今天两件小任务，第一件已经完成啦。" } }] }), {
+      headers: { "content-type": "application/json" },
+    });
+  };
+  try {
+    const env = { SESSION_SECRET: "secret", MODEL_ENDPOINT: "https://model.example", MODEL_API_KEY: "key", MODEL_NAME: "model" };
+    const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+    const body = await (await chatHandler({
+      env,
+      request: new Request("https://app.example/api/chat?date=2026-07-16", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ text: "我今天有什么任务", clientMessageId: "tasks-00000001" }),
+      }),
+    })).json();
+    assert.equal(body.messages.at(-1).content, "今天两件小任务，第一件已经完成啦。");
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
 test("chat searches for current热点 questions but not casual support", async () => {
   const data = new Map();
   globalThis.YUAN_ASSISTANT_KV = {
