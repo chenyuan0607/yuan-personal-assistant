@@ -60,20 +60,21 @@ test("model messages include compact memory and archive prompt keeps the date", 
     memory: "沟通偏好：直接",
     history: [{ role: "user", content: "你好" }],
     userText: "继续",
-    currentTime: "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00）",
+    currentTime: "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00，24小时制）",
   });
   assert.match(messages[0].content, /沟通偏好：直接/);
   assert.match(messages[0].content, /当前时间：北京时间 2026年07月15日 15:46/);
+  assert.match(messages[0].content, /24小时制/);
   assert.match(messages[0].content, /北京时间.*不要换算成 UTC/);
   assert.match(messages[0].content, /问.*现在几点.*必须.*当前时间/);
-  assert.equal(messages.at(-1).content, "继续");
+  assert.equal(messages.at(-1).content, "【当前北京时间】北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00，24小时制）\n继续");
   assert.match(buildArchiveMessages(messages, "2026-07-13")[1].content, /2026-07-13/);
 });
 
 test("current time text is explicit Beijing time instead of UTC", () => {
   assert.equal(
     currentTimeText(new Date("2026-07-15T07:46:00.000Z")),
-    "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00）",
+    "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00，24小时制）",
   );
 });
 
@@ -158,6 +159,44 @@ test("video links are acknowledged without spending a model call", async () => {
     })).json();
     assert.equal(body.messages.at(-1).content, "已收到");
     assert.equal(modelCalls, 0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
+test("exact time questions are answered by the backend Beijing clock without model calls", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const originalFetch = globalThis.fetch;
+  let modelCalls = 0;
+  globalThis.fetch = async () => {
+    modelCalls += 1;
+    return new Response(JSON.stringify({ choices: [{ message: { content: "wrong" } }] }), {
+      headers: { "content-type": "application/json" },
+    });
+  };
+  try {
+    const env = { SESSION_SECRET: "secret", MODEL_ENDPOINT: "https://model.example", MODEL_API_KEY: "key", MODEL_NAME: "model" };
+    const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+    const body = await (await chatHandler({
+      env,
+      request: new Request("https://app.example/api/chat?date=2026-07-15", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ text: "现在几点？", clientMessageId: "time-00000001" }),
+      }),
+    })).json();
+    assert.equal(modelCalls, 0);
+    assert.match(body.messages.at(-1).content, /北京时间/);
+    assert.doesNotMatch(body.messages.at(-1).content, /wrong/);
   } finally {
     globalThis.fetch = originalFetch;
     delete globalThis.YUAN_ASSISTANT_KV;

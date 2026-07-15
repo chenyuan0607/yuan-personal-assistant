@@ -20,17 +20,16 @@ const bytesToBase64 = (bytes) => {
   return btoa(binary);
 };
 export const currentTimeText = (now = new Date()) => {
-  const parts = Object.fromEntries(new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).formatToParts(now).map((part) => [part.type, part.value]));
-  return `北京时间 ${parts.year}年${parts.month}月${parts.day}日 ${parts.hour}:${parts.minute}（Asia/Shanghai，UTC+08:00）`;
+  const beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const year = beijing.getUTCFullYear();
+  const month = String(beijing.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(beijing.getUTCDate()).padStart(2, "0");
+  const hour = String(beijing.getUTCHours()).padStart(2, "0");
+  const minute = String(beijing.getUTCMinutes()).padStart(2, "0");
+  return `北京时间 ${year}年${month}月${day}日 ${hour}:${minute}（Asia/Shanghai，UTC+08:00，24小时制）`;
 };
+const exactTimeQuestion = (text) => /(现在几点|当前时间|现在时间|几点了|今天几号|今天日期|今天是几号)/.test(text);
+const directTimeAnswer = (text, nowText) => `现在是${nowText}。`;
 
 async function getJson(store, key) {
   return store.get(key, { type: "json" });
@@ -107,6 +106,11 @@ export default async function onRequest({ request, env }) {
     }
     if (deferredLinkMessage(userText)) {
       const assistantRecord = { id: assistantId, role: "assistant", content: "已收到", date, createdAt: new Date().toISOString(), sources: [] };
+      await store.put(assistantKey, JSON.stringify(assistantRecord));
+      return json({ ok: true, messages: [userRecord, assistantRecord] });
+    }
+    if (!fileRecord && exactTimeQuestion(userText)) {
+      const assistantRecord = { id: assistantId, role: "assistant", content: directTimeAnswer(userText, currentTimeText()), date, createdAt: new Date().toISOString(), sources: [] };
       await store.put(assistantKey, JSON.stringify(assistantRecord));
       return json({ ok: true, messages: [userRecord, assistantRecord] });
     }
