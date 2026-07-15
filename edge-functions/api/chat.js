@@ -19,15 +19,18 @@ const bytesToBase64 = (bytes) => {
   for (const byte of array) binary += String.fromCharCode(byte);
   return btoa(binary);
 };
-const currentTimeText = (now = new Date()) => `${new Intl.DateTimeFormat("zh-CN", {
-  timeZone: "Asia/Shanghai",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-}).format(now)} Asia/Shanghai`;
+export const currentTimeText = (now = new Date()) => {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now).map((part) => [part.type, part.value]));
+  return `北京时间 ${parts.year}年${parts.month}月${parts.day}日 ${parts.hour}:${parts.minute}（Asia/Shanghai，UTC+08:00）`;
+};
 
 async function getJson(store, key) {
   return store.get(key, { type: "json" });

@@ -72,8 +72,10 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   };
 
   const scrollLatestMessageIntoView = () => {
-    list.lastElementChild?.scrollIntoView({ block: "end", behavior: "smooth" });
-    list.scrollTop = list.scrollHeight;
+    const scrollToBottom = () => { list.scrollTop = list.scrollHeight; };
+    scrollToBottom();
+    requestAnimationFrame(scrollToBottom);
+    setTimeout(scrollToBottom, 80);
   };
 
   const createThinkingMessage = (pending) => pending.length ? [{

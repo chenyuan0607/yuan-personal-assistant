@@ -13,7 +13,7 @@ import { buildArchiveMessages, buildModelMessages } from "../edge-functions/_lib
 import { needsSearch } from "../edge-functions/_lib/search.js";
 import { listJson } from "../edge-functions/_lib/storage.js";
 import { feedbackKey, validateFeedback } from "../edge-functions/_lib/feedback.js";
-import chatHandler from "../edge-functions/api/chat.js";
+import chatHandler, { currentTimeText } from "../edge-functions/api/chat.js";
 import filesHandler from "../edge-functions/api/files.js";
 import feedbackHandler from "../edge-functions/api/feedback.js";
 import codexHandler, { saveMemory } from "../edge-functions/api/codex.js";
@@ -60,13 +60,21 @@ test("model messages include compact memory and archive prompt keeps the date", 
     memory: "沟通偏好：直接",
     history: [{ role: "user", content: "你好" }],
     userText: "继续",
-    currentTime: "2026-07-15 04:53 Asia/Shanghai",
+    currentTime: "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00）",
   });
   assert.match(messages[0].content, /沟通偏好：直接/);
-  assert.match(messages[0].content, /当前时间：2026-07-15 04:53 Asia\/Shanghai/);
+  assert.match(messages[0].content, /当前时间：北京时间 2026年07月15日 15:46/);
+  assert.match(messages[0].content, /北京时间.*不要换算成 UTC/);
   assert.match(messages[0].content, /问.*现在几点.*必须.*当前时间/);
   assert.equal(messages.at(-1).content, "继续");
   assert.match(buildArchiveMessages(messages, "2026-07-13")[1].content, /2026-07-13/);
+});
+
+test("current time text is explicit Beijing time instead of UTC", () => {
+  assert.equal(
+    currentTimeText(new Date("2026-07-15T07:46:00.000Z")),
+    "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00）",
+  );
 });
 
 test("KV listing follows official pagination and reads key fields", async () => {
