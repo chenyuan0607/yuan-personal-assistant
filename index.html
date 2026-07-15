@@ -10,7 +10,7 @@
 </head>
 <body>
   <main>
-    <section id="today-view" class="view" aria-labelledby="today-tab">
+    <section id="today-view" class="view" aria-labelledby="today-tab" hidden>
       <div class="date-row"><span data-plan-date>--</span><span>更新于 <span data-plan-updated>--</span></span></div>
       <p class="warning" data-plan-warning hidden>这是之前的计划，请留意日期。</p>
       <section class="focus-panel"><p>今日焦点</p><h2 data-plan-focus>正在读取今日计划…</h2></section>
@@ -111,7 +111,7 @@
       <div id="history-list" class="history-list"><p class="empty">打开每日任务后，这里会自动留下最近记录。</p></div>
     </section>
 
-    <section id="assistant-view" class="view assistant-view" aria-labelledby="assistant-tab" hidden>
+    <section id="assistant-view" class="view assistant-view" aria-labelledby="assistant-tab">
       <input id="assistant-avatar-file" type="file" accept="image/*" hidden>
       <header class="assistant-chat-topbar">
         <h2 id="assistant-title">缘的小助手</h2>
@@ -147,8 +147,8 @@
   </main>
 
   <nav class="bottom-nav" aria-label="主要页面">
-    <button id="today-tab" class="active" data-view="today-view"><span aria-hidden="true">☀</span>今天</button>
-    <button id="assistant-tab" data-view="assistant-view"><span aria-hidden="true">✦</span>助手</button>
+    <button id="today-tab" data-view="today-view"><span aria-hidden="true">☀</span>今天</button>
+    <button id="assistant-tab" class="active" data-view="assistant-view"><span aria-hidden="true">✦</span>助手</button>
     <button id="ledger-tab" data-view="ledger-view"><span aria-hidden="true">¥</span>账本</button>
     <button id="other-tab" data-view="other-view"><span aria-hidden="true">•••</span>其他</button>
   </nav>
