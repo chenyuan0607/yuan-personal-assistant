@@ -9,7 +9,7 @@ import {
   validateMessage,
 } from "../edge-functions/_lib/records.js";
 import { issueToken, sha256, verifyToken } from "../edge-functions/_lib/crypto.js";
-import { buildArchiveMessages, buildModelMessages } from "../edge-functions/_lib/model.js";
+import { buildArchiveMessages, buildImageReplyMessages, buildModelMessages } from "../edge-functions/_lib/model.js";
 import { needsSearch, searchWeb } from "../edge-functions/_lib/search.js";
 import { listJson } from "../edge-functions/_lib/storage.js";
 import { feedbackKey, validateFeedback } from "../edge-functions/_lib/feedback.js";
@@ -204,8 +204,38 @@ test("model messages include compact memory and archive prompt keeps the date", 
   assert.match(messages[0].content, /24小时制/);
   assert.match(messages[0].content, /北京时间.*不要换算成 UTC/);
   assert.match(messages[0].content, /问.*现在几点.*必须.*当前时间/);
-  assert.equal(messages.at(-1).content, "【当前北京时间】北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00，24小时制）\n继续");
+  assert.equal(messages.at(-1).content, "继续");
   assert.match(buildArchiveMessages(messages, "2026-07-13")[1].content, /2026-07-13/);
+});
+
+test("model persona is Qingqing and avoids robotic timestamped replies", () => {
+  const messages = buildModelMessages({
+    memory: "我最近压力有点大，需要被鼓励",
+    history: [],
+    userText: "我今天有点难过",
+    currentTime: "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00，24小时制）",
+  });
+  const system = messages[0].content;
+  assert.match(system, /青青/);
+  assert.match(system, /女朋友/);
+  assert.match(system, /温柔贤惠/);
+  assert.match(system, /鼓励/);
+  assert.match(system, /打趣/);
+  assert.match(system, /安慰/);
+  assert.match(system, /避免人机化/);
+  assert.match(system, /不要在每次回复里主动带时间/);
+  assert.match(system, /图片内容/);
+  assert.doesNotMatch(messages.at(-1).content, /当前北京时间/);
+
+  const imageMessages = buildImageReplyMessages({
+    memory: "",
+    history: [],
+    userText: "看看这个",
+    imageSummary: "图片里是一只猫趴在桌上。",
+    currentTime: "北京时间 2026年07月15日 15:46（Asia/Shanghai，UTC+08:00，24小时制）",
+  });
+  assert.match(imageMessages[0].content, /青青/);
+  assert.match(imageMessages.at(-1).content, /图片里是一只猫/);
 });
 
 test("current time text is explicit Beijing time instead of UTC", () => {
