@@ -279,9 +279,13 @@ test("assistant chat leaves enough safe space above the fixed composer and botto
   const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
 
   assert.match(css, /\.assistant-view\{[^}]*padding:58px 0 210px/);
+  assert.match(css, /\.assistant-messages\{[^}]*height:calc\(100vh - 300px\)/);
   assert.match(css, /\.assistant-messages\{[^}]*max-height:calc\(100vh - 300px\)/);
   assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 36px/);
   assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:120px/);
+  assert.match(css, /\.assistant-messages\{[^}]*display:flex/);
+  assert.match(css, /\.assistant-messages\{[^}]*flex-direction:column/);
+  assert.match(css, /\.assistant-messages::before\{content:"";margin-top:auto\}/);
   assert.doesNotMatch(css, /\.assistant-messages\{[^}]*padding:8px 8px 1[0-9]{2}px/);
 });
 
