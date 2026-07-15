@@ -37,6 +37,11 @@ export function createSpeechController({ Recognition, getValue, setValue, onStat
 
 export const emptyStickerMessage = (manifest) => manifest.stickers?.length ? "" : "还没有表情包素材";
 
+export function stickerMessage(sticker) {
+  if (!sticker?.label || !/^\.\/assets\/stickers\/[-A-Za-z0-9_./]+\.png$/.test(sticker.src || "")) throw new Error("表情包素材无效");
+  return `[表情包:${sticker.label}](${sticker.src})`;
+}
+
 async function resizeAvatar(file) {
   if (!file?.type?.startsWith("image/")) throw new Error("请选择图片文件");
   const source = await new Promise((resolve, reject) => {
@@ -52,7 +57,7 @@ async function resizeAvatar(file) {
   return canvas.toDataURL("image/webp", 0.82);
 }
 
-export function initAssistantTools({ root = document, status, storage = localStorage, fetchImpl = fetch } = {}) {
+export function initAssistantTools({ root = document, status, storage = localStorage, fetchImpl = fetch, onSticker = () => {} } = {}) {
   const input = root.querySelector("#assistant-input");
   const preferences = createAssistantPreferences(storage);
   const avatarFile = root.querySelector("#assistant-avatar-file");
@@ -66,12 +71,40 @@ export function initAssistantTools({ root = document, status, storage = localSto
 
   const stickerButton = root.querySelector("#assistant-stickers");
   const stickerPanel = root.querySelector("#assistant-sticker-panel");
+  const renderStickerPanel = (manifest) => {
+    stickerPanel.replaceChildren();
+    if (!manifest.stickers?.length) {
+      stickerPanel.textContent = emptyStickerMessage(manifest);
+      return;
+    }
+    const grid = document.createElement("div");
+    grid.className = "assistant-sticker-grid";
+    for (const sticker of manifest.stickers) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "assistant-sticker";
+      button.title = sticker.label;
+      button.setAttribute("aria-label", `发送表情：${sticker.label}`);
+      const image = document.createElement("img");
+      image.src = sticker.src;
+      image.alt = sticker.label;
+      const label = document.createElement("span");
+      label.textContent = sticker.label;
+      button.append(image, label);
+      button.addEventListener("click", () => {
+        stickerPanel.hidden = true;
+        onSticker(stickerMessage(sticker));
+      });
+      grid.append(button);
+    }
+    stickerPanel.append(grid);
+  };
   stickerButton.addEventListener("click", async () => {
     stickerPanel.hidden = !stickerPanel.hidden;
     if (stickerPanel.hidden || stickerPanel.dataset.loaded) return;
     try {
       const manifest = await (await fetchImpl("./assets/stickers/manifest.json")).json();
-      stickerPanel.textContent = emptyStickerMessage(manifest);
+      renderStickerPanel(manifest);
       stickerPanel.dataset.loaded = "true";
     } catch { stickerPanel.textContent = "表情包素材暂时无法读取"; }
   });

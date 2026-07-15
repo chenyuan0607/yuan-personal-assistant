@@ -6,7 +6,7 @@ import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js"
 import { createAssistantApi } from "../js/assistant-api.js";
 import { flushFeedback, syncTaskProgress } from "../js/feedback-sync.js";
 import { formatChatTimeLabel, formatMessage, groupMessagesByDate, shouldShowTimeDivider } from "../js/assistant-view.js";
-import { refreshAssistantData, flushPending, loadAssistantSnapshot, localDate, safeSourceUrl } from "../js/assistant-ui.js";
+import { parseStickerMessage, refreshAssistantData, flushPending, loadAssistantSnapshot, localDate, safeSourceUrl } from "../js/assistant-ui.js";
 
 test("pending messages survive until acknowledged in insertion order", () => {
   const store = createMemoryStore();
@@ -37,6 +37,15 @@ test("message view exposes safe source fields without interpreting html", () => 
 
 test("messages are grouped by their explicit date", () => {
   assert.deepEqual(Object.keys(groupMessagesByDate([{ date: "2026-07-13" }, { date: "2026-07-14" }])), ["2026-07-13", "2026-07-14"]);
+});
+
+test("assistant sticker messages only accept local sticker assets", () => {
+  assert.deepEqual(parseStickerMessage("[表情包:开心](./assets/stickers/fluent/happy.png)"), {
+    label: "开心",
+    src: "./assets/stickers/fluent/happy.png",
+  });
+  assert.equal(parseStickerMessage("[表情包:坏](https://example.com/hack.png)"), null);
+  assert.equal(parseStickerMessage("普通聊天"), null);
 });
 
 test("chat time labels follow messaging app style", () => {
@@ -293,6 +302,17 @@ test("assistant renders an AI thinking bubble while a sent message is pending", 
   assert.match(script, /createThinkingMessage/);
   assert.match(script, /role: "assistant"/);
   assert.match(script, /content: "正在思考中…"/);
+});
+
+test("assistant renders sticker messages as local images", async () => {
+  const [script, css] = await Promise.all([
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(script, /parseStickerMessage/);
+  assert.match(script, /assistant-sticker-message/);
+  assert.match(css, /\.assistant-sticker-message/);
 });
 
 test("assistant composer uses a plus button for file upload instead of mic", async () => {

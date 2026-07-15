@@ -1,4 +1,19 @@
 {
-  "version": 1,
-  "stickers": []
+  "version": 2,
+  "source": "Microsoft Fluent Emoji",
+  "license": "MIT",
+  "licenseFile": "./assets/stickers/LICENSE-fluent-emoji.md",
+  "stickers": [
+    { "id": "happy", "label": "开心", "src": "./assets/stickers/fluent/happy.png" },
+    { "id": "smile", "label": "微笑", "src": "./assets/stickers/fluent/smile.png" },
+    { "id": "hug", "label": "抱抱", "src": "./assets/stickers/fluent/hug.png" },
+    { "id": "thinking", "label": "思考", "src": "./assets/stickers/fluent/thinking.png" },
+    { "id": "ok", "label": "收到", "src": "./assets/stickers/fluent/ok.png" },
+    { "id": "cheer", "label": "加油", "src": "./assets/stickers/fluent/cheer.png" },
+    { "id": "sleepy", "label": "困困", "src": "./assets/stickers/fluent/sleepy.png" },
+    { "id": "cry", "label": "哭哭", "src": "./assets/stickers/fluent/cry.png" },
+    { "id": "heart_eyes", "label": "星星眼", "src": "./assets/stickers/fluent/heart_eyes.png" },
+    { "id": "sparkles", "label": "闪闪", "src": "./assets/stickers/fluent/sparkles.png" },
+    { "id": "heart", "label": "爱心", "src": "./assets/stickers/fluent/heart.png" }
+  ]
 }

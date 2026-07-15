@@ -32,6 +32,11 @@ export async function loadAssistantSnapshot(api, date) {
   }
 }
 
+export function parseStickerMessage(content) {
+  const match = String(content || "").match(/^\[表情包:([^\]]{1,20})\]\((\.\/assets\/stickers\/[-A-Za-z0-9_./]+\.png)\)$/);
+  return match ? { label: match[1], src: match[2] } : null;
+}
+
 export async function refreshAssistantData(store, api, date) {
   const snapshot = await loadAssistantSnapshot(api, date);
   const hadPending = store.pending().length > 0;
@@ -52,7 +57,13 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   const fileList = root.querySelector("#assistant-files");
   const memoryStatus = root.querySelector("#assistant-memory-status");
   const archiveStatus = root.querySelector("#assistant-archive-status");
-  const assistantTools = initAssistantTools({ root, status });
+  const enqueueText = async (text) => {
+    store.enqueue({ id: crypto.randomUUID(), text, date: localDate(), createdAt: new Date().toISOString() });
+    status.textContent = "正在思考中";
+    render();
+    await refresh();
+  };
+  const assistantTools = initAssistantTools({ root, status, onSticker: enqueueText });
   let serverMessages = [];
   const menuButton = root.querySelector("#assistant-menu");
   const showAssistantMenu = () => onMenu("assistant-menu-view");
@@ -109,7 +120,16 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       row.className = `assistant-message-row ${message.role}`;
       const article = document.createElement("article");
       article.className = `assistant-message ${message.role}${raw.pending ? " pending" : ""}`;
-      const text = document.createElement("div"); text.textContent = message.content; article.append(text);
+      const sticker = parseStickerMessage(message.content);
+      if (sticker) {
+        const image = document.createElement("img");
+        image.className = "assistant-sticker-message";
+        image.src = sticker.src;
+        image.alt = sticker.label;
+        article.append(image);
+      } else {
+        const text = document.createElement("div"); text.textContent = message.content; article.append(text);
+      }
       if (raw.pending && message.role === "assistant") { const note = document.createElement("small"); note.textContent = "正在思考中"; article.append(note); }
       if (message.sources.length) {
         const sources = document.createElement("div"); sources.className = "assistant-sources";
@@ -171,8 +191,9 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   root.querySelector("#assistant-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const input = root.querySelector("#assistant-input");
-    store.enqueue({ id: crypto.randomUUID(), text: input.value, date: localDate(), createdAt: new Date().toISOString() });
-    input.value = ""; status.textContent = "正在思考中"; render(); await refresh();
+    const text = input.value;
+    input.value = "";
+    await enqueueText(text);
   });
   root.querySelector("#assistant-file").addEventListener("change", async (event) => {
     const file = event.target.files[0]; if (!file) return;

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import { assistantAvatarSource, createAssistantPreferences, createSpeechController, emptyStickerMessage } from "../js/assistant-tools.js";
+import { assistantAvatarSource, createAssistantPreferences, createSpeechController, emptyStickerMessage, stickerMessage } from "../js/assistant-tools.js";
 
 test("assistant avatar preference stays in browser storage", () => {
   const data = new Map();
@@ -39,8 +39,12 @@ test("speech controller reports unsupported browsers", () => {
   assert.equal(createSpeechController({ Recognition: null, getValue: () => "", setValue: () => {} }).supported, false);
 });
 
-test("sticker library starts empty", async () => {
+test("sticker library includes safe built-in Fluent Emoji stickers", async () => {
   const manifest = JSON.parse(await readFile(new URL("../assets/stickers/manifest.json", import.meta.url), "utf8"));
-  assert.deepEqual(manifest, { version: 1, stickers: [] });
-  assert.equal(emptyStickerMessage(manifest), "还没有表情包素材");
+  assert.equal(manifest.source, "Microsoft Fluent Emoji");
+  assert.equal(manifest.license, "MIT");
+  assert.equal(manifest.stickers.length >= 10, true);
+  assert.equal(emptyStickerMessage(manifest), "");
+  assert.equal(stickerMessage(manifest.stickers[0]), `[表情包:${manifest.stickers[0].label}](${manifest.stickers[0].src})`);
+  assert.throws(() => stickerMessage({ label: "坏链接", src: "https://example.com/a.png" }), /无效/);
 });
