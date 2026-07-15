@@ -333,6 +333,26 @@ test("assistant roof page can rename the chat title and enable push notification
   assert.match(worker, /addEventListener\("notificationclick"/);
 });
 
+test("other hub loads work notifications as a card-style tool page", async () => {
+  const [html, appScript, apiScript, workerScript, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../js/assistant-api.js", import.meta.url), "utf8"),
+    readFile(new URL("../js/work-notifications.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(html, /data-tool-view="work-notifications-view"/);
+  assert.match(html, /id="work-notifications-list"/);
+  assert.match(apiScript, /listWorkNotifications: \(\) => request\("\/api\/work-notifications\?resource=work-notifications"\)/);
+  assert.match(appScript, /initWorkNotifications/);
+  assert.match(appScript, /#work-notifications-back/);
+  assert.match(appScript, /refreshWorkNotifications\(\)/);
+  assert.match(workerScript, /work-notification-item/);
+  assert.match(workerScript, /work-notifications-summary/);
+  assert.match(css, /\.work-notification-item/);
+});
+
 test("assistant keeps the latest thinking message above the fixed composer", async () => {
   const [script, css] = await Promise.all([
     readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),

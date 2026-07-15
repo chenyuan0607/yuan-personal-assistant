@@ -30,9 +30,14 @@ test("other view is a weather-first tool hub", () => {
   assert.match(html, /id="weather-panel"/);
   assert.match(html, /data-tool-view="assistant-backstage-view"/);
   assert.match(html, /data-tool-view="growth-review-view"/);
+  assert.match(html, /data-tool-view="work-notifications-view"/);
+  assert.match(html, /id="work-notifications-summary"/);
   assert.match(html, /href="https:\/\/synthapi\.asia\/wallet"[^>]+target="_blank"[^>]+rel="noreferrer"/);
   assert.match(html, /id="assistant-backstage-view"[^>]+hidden/);
   assert.match(html, /id="growth-review-view"[^>]+hidden/);
+  assert.match(html, /id="work-notifications-view"[^>]+hidden/);
+  assert.match(html, /id="work-notifications-back"/);
+  assert.match(html, /id="work-notifications-list"/);
 });
 
 test("layout resists accidental zoom and stays phone-width on desktop", async () => {

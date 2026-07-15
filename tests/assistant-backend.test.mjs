@@ -19,6 +19,7 @@ import feedbackHandler from "../edge-functions/api/feedback.js";
 import codexHandler, { saveMemory } from "../edge-functions/api/codex.js";
 import { selectDeletable } from "../edge-functions/api/cleanup.js";
 import notificationsHandler from "../edge-functions/api/notifications.js";
+import workNotificationsHandler from "../edge-functions/api/work-notifications.js";
 
 test("record keys are stable and owner scoped", () => {
   assert.equal(chatKey("owner", "2026-07-13", "m-1"), "chat_owner_2026_07_13_m_1");
@@ -77,6 +78,72 @@ test("device can register push notification subscriptions and test send cleans e
     assert.equal(body.removed, 1);
     assert.equal(sent.length, 2);
     assert.equal([...data.keys()].filter((key) => key.startsWith("push_owner_")).length, 1);
+  } finally {
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
+test("codex can publish work notifications that devices can list", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const sent = [];
+  const env = {
+    SESSION_SECRET: "secret",
+    VAPID_PUBLIC_KEY: "public-key",
+    VAPID_PRIVATE_KEY: "private-key",
+    WEB_PUSH_IMPL: {
+      setVapidDetails() {},
+      async sendNotification(subscription, payload) {
+        sent.push({ subscription, payload: JSON.parse(payload) });
+        if (subscription.endpoint.includes("expired")) {
+          const error = new Error("gone");
+          error.statusCode = 410;
+          throw error;
+        }
+      },
+    },
+  };
+  const codexToken = await issueToken({ sub: "owner", kind: "codex", exp: 9999999999 }, env.SESSION_SECRET);
+  const deviceToken = await issueToken({ sub: "owner", kind: "device", deviceName: "phone", exp: 9999999999 }, env.SESSION_SECRET);
+  try {
+    data.set("push_owner_active", { key: "push_owner_active", owner: "owner", subscription: { endpoint: "https://push.example/active", keys: { p256dh: "p256dh", auth: "auth" } } });
+    data.set("push_owner_expired", { key: "push_owner_expired", owner: "owner", subscription: { endpoint: "https://push.example/expired", keys: { p256dh: "p256dh", auth: "auth" } } });
+
+    const published = await workNotificationsHandler({
+      env,
+      request: new Request("https://app.example/api/work-notifications?resource=work-notifications&action=publish", {
+        method: "POST",
+        headers: { authorization: `Bearer ${codexToken}`, "content-type": "application/json" },
+        body: JSON.stringify({ title: "项目已完成", body: "个人助手网页已经发布。", level: "success" }),
+      }),
+    });
+    const publishedBody = await published.json();
+    assert.equal(publishedBody.ok, true);
+    assert.equal(publishedBody.notification.title, "项目已完成");
+    assert.equal(publishedBody.notification.status, "unread");
+    assert.equal(publishedBody.pushed.sent, 1);
+    assert.equal(publishedBody.pushed.removed, 1);
+    assert.equal(sent.length, 2);
+    assert.equal(sent[0].payload.title, "青青");
+    assert.match(sent[0].payload.body, /项目已完成/);
+    assert.equal(data.has("push_owner_expired"), false);
+
+    const listed = await workNotificationsHandler({
+      env,
+      request: new Request("https://app.example/api/work-notifications?resource=work-notifications", {
+        headers: { authorization: `Bearer ${deviceToken}` },
+      }),
+    });
+    const listedBody = await listed.json();
+    assert.equal(listedBody.ok, true);
+    assert.deepEqual(listedBody.notifications.map((item) => item.title), ["项目已完成"]);
   } finally {
     delete globalThis.YUAN_ASSISTANT_KV;
   }

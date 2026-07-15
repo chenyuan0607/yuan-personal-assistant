@@ -32,5 +32,6 @@ export function createAssistantApi({ baseUrl, getToken, fetchImpl = fetch }) {
     notificationKey: () => request("/api/notifications?action=key"),
     saveNotificationSubscription: (subscription) => request("/api/notifications?action=subscribe", { method: "POST", body: JSON.stringify({ subscription }) }),
     sendTestNotification: () => request("/api/notifications?action=test", { method: "POST", body: "{}" }),
+    listWorkNotifications: () => request("/api/work-notifications?resource=work-notifications"),
   };
 }

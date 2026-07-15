@@ -7,6 +7,7 @@ import feedbackHandler from "../../edge-functions/api/feedback.js";
 import codexHandler from "../../edge-functions/api/codex.js";
 import filesHandler from "../../edge-functions/api/files.js";
 import notificationsHandler from "../../edge-functions/api/notifications.js";
+import workNotificationsHandler from "../../edge-functions/api/work-notifications.js";
 import { createCloudBaseBlob, createCloudBaseStore } from "./storage.js";
 
 const app = cloudbase.init({ env: process.env.TCB_ENV || cloudbase.SYMBOL_CURRENT_ENV });
@@ -24,6 +25,7 @@ const handlers = new Map([
   ["/api/codex", codexHandler],
   ["/api/files", filesHandler],
   ["/api/notifications", notificationsHandler],
+  ["/api/work-notifications", workNotificationsHandler],
 ]);
 
 const env = new Proxy({}, {
@@ -94,8 +96,10 @@ export function createRelayServer() {
       }
       const pathname = url.pathname.replace(/\/+$/, "") || "/";
       const notificationAction = url.searchParams.get("action");
+      const resource = url.searchParams.get("resource");
       const handler = handlers.get(pathname)
         || (pathname === "/" && ["key", "subscribe", "test"].includes(notificationAction) ? notificationsHandler : null)
+        || (pathname === "/" && resource === "work-notifications" ? workNotificationsHandler : null)
         || (pathname === "/" ? filesHandler : null);
       if (!handler) {
         await sendResponse(res, Response.json({ ok: false, error: "Not Found" }, { status: 404 }), origin);

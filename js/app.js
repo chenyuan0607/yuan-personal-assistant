@@ -8,6 +8,7 @@ import { flushFeedback, syncTaskProgress } from "./feedback-sync.js";
 import { createPomodoroStore } from "./pomodoro-store.js";
 import { initPomodoro } from "./pomodoro-ui.js";
 import { initWeather } from "./weather.js";
+import { initWorkNotifications } from "./work-notifications.js";
 
 const showView = (viewId) => {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== viewId; });
@@ -19,10 +20,15 @@ document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEv
   if (button.dataset.view === "assistant-view") assistantRefresh();
 }));
 
-document.querySelectorAll("[data-tool-view]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.toolView)));
+let refreshWorkNotifications = async () => {};
+document.querySelectorAll("[data-tool-view]").forEach((button) => button.addEventListener("click", async () => {
+  showView(button.dataset.toolView);
+  if (button.dataset.toolView === "work-notifications-view") await refreshWorkNotifications();
+}));
 document.querySelector("#assistant-menu-back").addEventListener("click", () => { showView("assistant-view"); assistantRefresh(); });
 document.querySelector("#assistant-backstage-back").addEventListener("click", () => showView("assistant-menu-view"));
 document.querySelector("#growth-review-back").addEventListener("click", () => showView("other-view"));
+document.querySelector("#work-notifications-back").addEventListener("click", () => showView("other-view"));
 
 const assistantBaseUrl = document.documentElement.dataset.assistantApi || location.origin;
 const assistantStore = createBrowserStore();
@@ -43,6 +49,7 @@ const flushPendingFeedback = async () => {
 };
 const queueFeedback = async (record) => { pomodoroStore.addResult(record); await flushPendingFeedback(); };
 const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore, onSession: flushPendingFeedback, onMenu: (viewId = "assistant-menu-view") => showView(viewId) });
+refreshWorkNotifications = initWorkNotifications({ api: feedbackApi });
 if (!document.querySelector("#assistant-view")?.hidden) await assistantRefresh();
 pomodoro = initPomodoro({
   store: pomodoroStore,
