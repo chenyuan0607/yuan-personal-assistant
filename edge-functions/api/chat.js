@@ -19,6 +19,11 @@ const bytesToBase64 = (bytes) => {
   for (const byte of array) binary += String.fromCharCode(byte);
   return btoa(binary);
 };
+const imagePreview = (fileRecord, imageBase64) => {
+  if (!String(fileRecord?.type || "").startsWith("image/")) return null;
+  if (!imageBase64 || imageBase64.length > 900000) return null;
+  return `data:${fileRecord.type};base64,${imageBase64}`;
+};
 export const currentTimeText = (now = new Date()) => {
   const beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   const year = beijing.getUTCFullYear();
@@ -86,11 +91,14 @@ export default async function onRequest({ request, env }) {
     if (userRecord && existingAssistant) return json({ ok: true, duplicate: true, messages: [userRecord, existingAssistant] });
     const history = await listJson(chatPrefix(owner.sub, date), store);
     let fileRecord = null;
+    let imageBase64 = "";
     if (fileId) {
       fileRecord = await getJson(store, fileKey(owner.sub, fileId));
       if (!fileRecord) throw new Error("文件不存在");
       if (!String(fileRecord.type || "").startsWith("image/")) throw new Error("目前只有图片可以发给AI识别");
       if (Number(fileRecord.size || 0) > 10 * 1024 * 1024) throw new Error("识图图片需要小于10MB");
+      const objects = blob(env);
+      if (typeof objects.bytes === "function") imageBase64 = bytesToBase64(await objects.bytes(fileRecord.blobKey));
     }
     if (!userRecord) {
       userRecord = {
@@ -100,7 +108,7 @@ export default async function onRequest({ request, env }) {
         date,
         createdAt: new Date().toISOString(),
         sources: [],
-        ...(fileRecord ? { attachment: { id: fileRecord.id, name: fileRecord.name, type: fileRecord.type } } : {}),
+        ...(fileRecord ? { attachment: { id: fileRecord.id, name: fileRecord.name, type: fileRecord.type, preview: imagePreview(fileRecord, imageBase64) } } : {}),
       };
       await store.put(userKey, JSON.stringify(userRecord));
     }
@@ -128,7 +136,8 @@ export default async function onRequest({ request, env }) {
     if (fileRecord) {
       const objects = blob(env);
       let imageUrl;
-      if (typeof objects.bytes === "function") imageUrl = bytesToBase64(await objects.bytes(fileRecord.blobKey));
+      if (imageBase64) imageUrl = imageBase64;
+      else if (typeof objects.bytes === "function") imageUrl = bytesToBase64(await objects.bytes(fileRecord.blobKey));
       else if (typeof objects.url === "function") imageUrl = await objects.url(fileRecord.blobKey);
       else throw new Error("文件读取能力尚未配置");
       const imageSummary = await callVisionModel(buildImageUnderstandingMessages({ imageUrl, userText }), env);

@@ -5,6 +5,9 @@ export const formatMessage = (message) => ({
   createdAt: message.createdAt,
   date: message.date,
   sources: (message.sources ?? []).map(({ title, url, date }) => ({ title, url, date })),
+  attachment: message.attachment?.preview && /^data:image\/(?:png|jpe?g|gif|webp);base64,/.test(message.attachment.preview)
+    ? { name: message.attachment.name, type: message.attachment.type, preview: message.attachment.preview }
+    : null,
 });
 
 function beijingParts(value) {

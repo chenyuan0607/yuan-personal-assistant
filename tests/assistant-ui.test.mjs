@@ -48,6 +48,15 @@ test("assistant sticker messages only accept local sticker assets", () => {
   assert.equal(parseStickerMessage("普通聊天"), null);
 });
 
+test("message view preserves image attachment preview for chat bubbles", () => {
+  const view = formatMessage({
+    role: "user",
+    content: "我发了一张图片",
+    attachment: { name: "photo.png", type: "image/png", preview: "data:image/png;base64,AAAA" },
+  });
+  assert.deepEqual(view.attachment, { name: "photo.png", type: "image/png", preview: "data:image/png;base64,AAAA" });
+});
+
 test("chat time labels follow messaging app style", () => {
   const now = new Date("2026-07-15T05:11:00+08:00");
   assert.equal(formatChatTimeLabel("2026-07-15T04:53:00+08:00", now), "04:53");
@@ -313,6 +322,17 @@ test("assistant renders sticker messages as local images", async () => {
   assert.match(script, /parseStickerMessage/);
   assert.match(script, /assistant-sticker-message/);
   assert.match(css, /\.assistant-sticker-message/);
+});
+
+test("assistant renders uploaded image messages as image bubbles", async () => {
+  const [script, css] = await Promise.all([
+    readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(script, /assistant-uploaded-image/);
+  assert.match(script, /message\.attachment\?\.preview/);
+  assert.match(css, /\.assistant-uploaded-image/);
 });
 
 test("assistant composer uses a plus button for file upload instead of mic", async () => {

@@ -625,6 +625,7 @@ test("chat image message uses the vision model with the uploaded file URL before
     })).json();
     assert.equal(body.ok, true);
     assert.equal(body.messages[0].attachment.name, "photo.png");
+    assert.equal(body.messages[0].attachment.preview, `data:image/png;base64,${Buffer.from("fake-image-bytes").toString("base64")}`);
     assert.match(body.messages[1].content, /橘猫/);
     assert.equal(calls.length, 2);
   } finally {

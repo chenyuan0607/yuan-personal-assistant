@@ -37,6 +37,16 @@ export function parseStickerMessage(content) {
   return match ? { label: match[1], src: match[2] } : null;
 }
 
+function localImagePreview(file) {
+  return new Promise((resolve, reject) => {
+    if (!file?.type?.startsWith("image/")) { resolve(null); return; }
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export async function refreshAssistantData(store, api, date) {
   const snapshot = await loadAssistantSnapshot(api, date);
   const hadPending = store.pending().length > 0;
@@ -127,6 +137,12 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
         image.src = sticker.src;
         image.alt = sticker.label;
         article.append(image);
+      } else if (message.attachment?.preview) {
+        const image = document.createElement("img");
+        image.className = "assistant-uploaded-image";
+        image.src = message.attachment.preview;
+        image.alt = message.attachment.name || "已上传图片";
+        article.append(image);
       } else {
         const text = document.createElement("div"); text.textContent = message.content; article.append(text);
       }
@@ -203,7 +219,20 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       event.target.value = "";
       if (file.type.startsWith("image/") && fileData.file?.id) {
         status.textContent = "正在识图中…";
-        await api.sendImageMessage("我发了一张图片，请帮我看看。", fileData.file.id, localDate(), crypto.randomUUID());
+        const clientMessageId = crypto.randomUUID();
+        const preview = await localImagePreview(file).catch(() => null);
+        serverMessages = [...serverMessages, {
+          id: clientMessageId,
+          role: "user",
+          content: "我发了一张图片，请帮我看看。",
+          date: localDate(),
+          createdAt: new Date().toISOString(),
+          sources: [],
+          pending: true,
+          attachment: { id: fileData.file.id, name: file.name, type: file.type, preview },
+        }];
+        render();
+        await api.sendImageMessage("我发了一张图片，请帮我看看。", fileData.file.id, localDate(), clientMessageId);
       }
       await refresh();
     }
