@@ -24,6 +24,11 @@ const imagePreview = (fileRecord, imageBase64) => {
   if (!imageBase64 || imageBase64.length > 900000) return null;
   return `data:${fileRecord.type};base64,${imageBase64}`;
 };
+const clientImagePreview = (value) => (
+  typeof value === "string"
+  && /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/.test(value)
+  && value.length < 400000
+) ? value : null;
 export const currentTimeText = (now = new Date()) => {
   const beijing = new Date(now.getTime() + 8 * 60 * 60 * 1000);
   const year = beijing.getUTCFullYear();
@@ -80,6 +85,7 @@ export default async function onRequest({ request, env }) {
     if (action !== "send") throw new Error("未知操作");
     const userText = validateMessage(body.text);
     const fileId = body.fileId;
+    const preview = clientImagePreview(body.preview);
     if (fileId && !/^[a-zA-Z0-9-]{8,80}$/.test(fileId)) throw new Error("文件编号无效");
     const clientMessageId = body.clientMessageId;
     if (!/^[a-zA-Z0-9-]{8,80}$/.test(clientMessageId || "")) throw new Error("消息编号无效");
@@ -108,7 +114,7 @@ export default async function onRequest({ request, env }) {
         date,
         createdAt: new Date().toISOString(),
         sources: [],
-        ...(fileRecord ? { attachment: { id: fileRecord.id, name: fileRecord.name, type: fileRecord.type, preview: imagePreview(fileRecord, imageBase64) } } : {}),
+        ...(fileRecord ? { attachment: { id: fileRecord.id, name: fileRecord.name, type: fileRecord.type, preview: preview || imagePreview(fileRecord, imageBase64) } } : {}),
       };
       await store.put(userKey, JSON.stringify(userRecord));
     }

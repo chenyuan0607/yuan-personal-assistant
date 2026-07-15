@@ -21,7 +21,7 @@ export function createAssistantApi({ baseUrl, getToken, fetchImpl = fetch }) {
     login: (accessCode, deviceName) => request("/api/auth", { method: "POST", body: JSON.stringify({ accessCode, deviceName }) }),
     listMessages: (date) => request(`/api/chat?date=${encodeURIComponent(date)}`),
     sendMessage: (text, date, clientMessageId) => request(`/api/chat?date=${encodeURIComponent(date)}`, { method: "POST", body: JSON.stringify({ text, clientMessageId }) }),
-    sendImageMessage: (text, fileId, date, clientMessageId) => request(`/api/chat?date=${encodeURIComponent(date)}`, { method: "POST", body: JSON.stringify({ text, fileId, clientMessageId }) }),
+    sendImageMessage: (text, fileId, date, clientMessageId, preview = null) => request(`/api/chat?date=${encodeURIComponent(date)}`, { method: "POST", body: JSON.stringify({ text, fileId, clientMessageId, ...(preview ? { preview } : {}) }) }),
     previewArchive: (date) => request("/api/chat?action=archive-preview", { method: "POST", body: JSON.stringify({ date }) }),
     directArchive: (date) => request("/api/chat?action=archive-direct", { method: "POST", body: JSON.stringify({ date }) }),
     listFiles: () => request("/api/files"),

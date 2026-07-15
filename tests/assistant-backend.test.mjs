@@ -620,12 +620,12 @@ test("chat image message uses the vision model with the uploaded file URL before
       request: new Request("https://app.example/api/chat?date=2026-07-15", {
         method: "POST",
         headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-        body: JSON.stringify({ text: "我发了一张图片，请帮我看看。", fileId: uploadedFileId, clientMessageId: "image-12345678" }),
+        body: JSON.stringify({ text: "我发了一张图片，请帮我看看。", fileId: uploadedFileId, clientMessageId: "image-12345678", preview: "data:image/webp;base64,SMALLPREVIEW" }),
       }),
     })).json();
     assert.equal(body.ok, true);
     assert.equal(body.messages[0].attachment.name, "photo.png");
-    assert.equal(body.messages[0].attachment.preview, `data:image/png;base64,${Buffer.from("fake-image-bytes").toString("base64")}`);
+    assert.equal(body.messages[0].attachment.preview, "data:image/webp;base64,SMALLPREVIEW");
     assert.match(body.messages[1].content, /橘猫/);
     assert.equal(calls.length, 2);
   } finally {

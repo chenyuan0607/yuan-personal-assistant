@@ -37,7 +37,7 @@ export function parseStickerMessage(content) {
   return match ? { label: match[1], src: match[2] } : null;
 }
 
-function localImagePreview(file) {
+function readImageDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file?.type?.startsWith("image/")) { resolve(null); return; }
     const reader = new FileReader();
@@ -45,6 +45,28 @@ function localImagePreview(file) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
+}
+
+async function compressedImagePreview(file) {
+  const source = await readImageDataUrl(file);
+  if (!source) return null;
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = reject;
+      element.src = source;
+    });
+    const maxSide = 520;
+    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/webp", 0.78);
+  } catch {
+    return source.length < 350000 ? source : null;
+  }
 }
 
 export async function refreshAssistantData(store, api, date) {
@@ -129,7 +151,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       const row = document.createElement("div");
       row.className = `assistant-message-row ${message.role}`;
       const article = document.createElement("article");
-      article.className = `assistant-message ${message.role}${raw.pending ? " pending" : ""}`;
+      article.className = `assistant-message ${message.role}${raw.pending ? " pending" : ""}${message.attachment?.preview ? " image" : ""}`;
       const sticker = parseStickerMessage(message.content);
       if (sticker) {
         const image = document.createElement("img");
@@ -220,7 +242,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
       if (file.type.startsWith("image/") && fileData.file?.id) {
         status.textContent = "正在识图中…";
         const clientMessageId = crypto.randomUUID();
-        const preview = await localImagePreview(file).catch(() => null);
+        const preview = await compressedImagePreview(file).catch(() => null);
         serverMessages = [...serverMessages, {
           id: clientMessageId,
           role: "user",
@@ -232,7 +254,7 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
           attachment: { id: fileData.file.id, name: file.name, type: file.type, preview },
         }];
         render();
-        await api.sendImageMessage("我发了一张图片，请帮我看看。", fileData.file.id, localDate(), clientMessageId);
+        await api.sendImageMessage("我发了一张图片，请帮我看看。", fileData.file.id, localDate(), clientMessageId, preview);
       }
       await refresh();
     }

@@ -81,6 +81,25 @@ test("api client adds bearer token and reuses the client message id", async () =
   assert.deepEqual(JSON.parse(calls[0].options.body), { text: "你好", clientMessageId: "client-12345678" });
 });
 
+test("api client sends compressed image preview with image chat messages", async () => {
+  const calls = [];
+  const api = createAssistantApi({
+    baseUrl: "https://assistant.example",
+    getToken: () => "token",
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify({ ok: true, messages: [] }), { headers: { "content-type": "application/json" } });
+    },
+  });
+  await api.sendImageMessage("我发了一张图片", "file-12345678", "2026-07-15", "client-12345678", "data:image/webp;base64,PREVIEW");
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    text: "我发了一张图片",
+    fileId: "file-12345678",
+    clientMessageId: "client-12345678",
+    preview: "data:image/webp;base64,PREVIEW",
+  });
+});
+
 test("api errors retain the response status", async () => {
   const api = createAssistantApi({
     baseUrl: "https://assistant.example",
@@ -332,7 +351,11 @@ test("assistant renders uploaded image messages as image bubbles", async () => {
 
   assert.match(script, /assistant-uploaded-image/);
   assert.match(script, /message\.attachment\?\.preview/);
+  assert.match(script, /compressedImagePreview/);
+  assert.match(script, /api\.sendImageMessage/);
+  assert.match(script, /clientMessageId,\s*preview/);
   assert.match(css, /\.assistant-uploaded-image/);
+  assert.match(css, /\.assistant-message\.user\.image/);
 });
 
 test("assistant composer uses a plus button for file upload instead of mic", async () => {
