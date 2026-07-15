@@ -28,5 +28,6 @@ export function createAssistantApi({ baseUrl, getToken, fetchImpl = fetch }) {
     uploadFile: (formData) => request("/api/files", { method: "POST", body: formData }),
     updateFile: (id, action) => request("/api/files", { method: "PATCH", body: JSON.stringify({ id, action }) }),
     saveFeedback: (record) => request("/api/feedback", { method: "POST", body: JSON.stringify(record) }),
+    listFeedback: (date) => request(`/api/feedback?date=${encodeURIComponent(date)}`),
   };
 }

@@ -66,6 +66,19 @@ test("browser store restores the active timer and queued results", () => {
   assert.equal(second.results().length, 1);
 });
 
+test("browser store merges synced task progress without marking it pending", () => {
+  const storage = memoryStorage();
+  const store = createPomodoroStore(storage);
+  store.addResult({ id: "local", kind: "task-result", taskId: "t1", outcome: "unfinished", completedAt: "2026-07-15T01:00:00Z", focusedSeconds: 60 });
+  store.mergeResults([
+    { id: "remote", kind: "task-result", taskId: "t2", outcome: "completed", completedAt: "2026-07-15T02:00:00Z", focusedSeconds: 120 },
+    { id: "local", kind: "task-result", taskId: "t1", outcome: "completed", completedAt: "2026-07-15T03:00:00Z", focusedSeconds: 180 },
+  ]);
+  assert.deepEqual(store.results().map((item) => item.id), ["remote", "local"]);
+  assert.deepEqual(store.pending().map((item) => item.id), ["local"]);
+  assert.equal(taskStatus(store.results(), "t1"), "completed");
+});
+
 test("clock and latest task status are deterministic", () => {
   assert.equal(formatClock(1_500_000), "25:00");
   assert.equal(formatClock(61_001), "01:02");

@@ -1,5 +1,7 @@
 const STORAGE_KEY = "yuan-pomodoro-v1";
 
+const resultTime = (item) => Date.parse(item.completedAt || item.updatedAt || item.receivedAt || item.createdAt || "") || 0;
+
 export function createPomodoroStore(storage = localStorage) {
   const load = () => {
     try {
@@ -24,6 +26,16 @@ export function createPomodoroStore(storage = localStorage) {
       const results = state.results.filter((item) => item.id !== result.id).concat(result);
       const pending = state.pending.filter((item) => item.id !== result.id).concat(result);
       save({ ...state, results, pending });
+    },
+    mergeResults(remoteResults) {
+      const state = load();
+      const byId = new Map(state.results.map((item) => [item.id, item]));
+      for (const item of remoteResults) {
+        const existing = byId.get(item.id);
+        if (!existing || resultTime(item) >= resultTime(existing)) byId.set(item.id, item);
+      }
+      const results = [...byId.values()].sort((a, b) => resultTime(a) - resultTime(b));
+      save({ ...state, results });
     },
     pending: () => [...load().pending],
     ack(id) {

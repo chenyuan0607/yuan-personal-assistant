@@ -746,6 +746,31 @@ test("feedback relay overwrites daily summaries and Codex acknowledges only afte
   }
 });
 
+test("device can pull synced task progress for a date", async () => {
+  const data = new Map([
+    ["feedback_owner_task_plan_2026_07_15_plan_2026_07_15", { id: "plan-2026-07-15", kind: "task-plan", date: "2026-07-15", status: "processed", tasks: [], updatedAt: "2026-07-15T01:00:00Z" }],
+    ["feedback_owner_task_result_2026_07_15_r1", { id: "r1", kind: "task-result", date: "2026-07-15", status: "waiting", taskId: "t1", title: "整理资料", plannedMinutes: 15, focusedSeconds: 300, outcome: "completed", completedAt: "2026-07-15T02:00:00Z", deviceName: "手机A" }],
+    ["feedback_owner_ledger_summary_2026_07_15_l1", { id: "l1", kind: "ledger-summary", date: "2026-07-15", status: "waiting" }],
+    ["feedback_owner_task_result_2026_07_14_old", { id: "old", kind: "task-result", date: "2026-07-14", status: "waiting", taskId: "old" }],
+  ]);
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) { return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) }; },
+  };
+  const env = { SESSION_SECRET: "secret" };
+  const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+  try {
+    const response = await feedbackHandler({ env, request: new Request("https://app.example/api/feedback?date=2026-07-15", { headers: { authorization: `Bearer ${token}` } }) });
+    const body = await response.json();
+    assert.equal(response.status, 200);
+    assert.deepEqual(body.items.map((item) => item.id).sort(), ["plan-2026-07-15", "r1"]);
+  } finally {
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
 test("a late feedback update pulls the full date snapshot for report replacement", async () => {
   const values = new Map([
     ["feedback_owner_task_plan_2026_07_12_plan_2026_07_12", { id: "plan-2026-07-12", kind: "task-plan", date: "2026-07-12", status: "processed", createdAt: "2026-07-12T01:00:00Z", tasks: [] }],

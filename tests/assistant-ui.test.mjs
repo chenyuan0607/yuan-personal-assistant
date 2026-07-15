@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 
 import { createBrowserStore, createMemoryStore } from "../js/assistant-store.js";
 import { createAssistantApi } from "../js/assistant-api.js";
-import { flushFeedback } from "../js/feedback-sync.js";
+import { flushFeedback, syncTaskProgress } from "../js/feedback-sync.js";
 import { formatChatTimeLabel, formatMessage, groupMessagesByDate, shouldShowTimeDivider } from "../js/assistant-view.js";
 import { refreshAssistantData, flushPending, loadAssistantSnapshot, localDate, safeSourceUrl } from "../js/assistant-ui.js";
 
@@ -88,6 +88,22 @@ test("feedback api sends bearer-authenticated records", async () => {
   assert.deepEqual(JSON.parse(calls[0].options.body), { id: "e1", kind: "task-result" });
 });
 
+test("feedback api pulls dated task progress for cross-device sync", async () => {
+  const calls = [];
+  const api = createAssistantApi({
+    baseUrl: "https://assistant.example",
+    getToken: () => "token",
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return new Response(JSON.stringify({ ok: true, items: [{ id: "e1", kind: "task-result" }] }), { headers: { "content-type": "application/json" } });
+    },
+  });
+  const body = await api.listFeedback("2026-07-15");
+  assert.equal(calls[0].url, "https://assistant.example/api/feedback?date=2026-07-15");
+  assert.equal(calls[0].options.headers.authorization, "Bearer token");
+  assert.deepEqual(body.items, [{ id: "e1", kind: "task-result" }]);
+});
+
 test("feedback queue is acknowledged only after successful upload", async () => {
   const pending = [{ id: "e1" }, { id: "e2" }];
   const acked = [];
@@ -117,6 +133,25 @@ test("chat remains available when temporary file transfer is unavailable", async
   assert.deepEqual(result.chatData.messages.map((item) => item.id), ["m1"]);
   assert.deepEqual(result.fileData.files, []);
   assert.equal(result.fileAvailable, false);
+});
+
+test("task progress sync merges remote task results without re-uploading them", async () => {
+  const added = [];
+  const store = {
+    mergeResults: (items) => added.push(...items),
+  };
+  const result = await syncTaskProgress(store, {
+    hasToken: () => true,
+    listFeedback: async (date) => ({
+      items: [
+        { id: "plan-2026-07-15", kind: "task-plan", date },
+        { id: "r1", kind: "task-result", date, taskId: "t1", outcome: "completed" },
+        { id: "l1", kind: "ledger-summary", date },
+      ],
+    }),
+  }, "2026-07-15");
+  assert.equal(result.merged, 2);
+  assert.deepEqual(added.map((item) => item.id), ["plan-2026-07-15", "r1"]);
 });
 
 test("memory snapshot loads even when pending replay fails", async () => {

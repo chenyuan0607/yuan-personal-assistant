@@ -8,3 +8,11 @@ export async function flushFeedback(store, api) {
   }
   return { sent };
 }
+
+export async function syncTaskProgress(store, api, date) {
+  if (!api.hasToken() || !date || typeof store.mergeResults !== "function") return { merged: 0 };
+  const body = await api.listFeedback(date);
+  const items = (body.items || []).filter((item) => item.kind === "task-plan" || item.kind === "task-result");
+  store.mergeResults(items);
+  return { merged: items.length };
+}
