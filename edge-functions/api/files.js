@@ -4,7 +4,7 @@ import { errorJson, json, readJson } from "../_lib/http.js";
 import { fileKey, filePrefix } from "../_lib/records.js";
 import { blob, kv, listJson } from "../_lib/storage.js";
 
-const allowedExtensions = /\.(png|jpe?g|gif|webp|pdf|docx?|md|txt)$/i;
+const allowedExtensions = /\.(png|jpe?g|gif|webp|pdf|docx?|xlsx?|csv|tsv|md|txt)$/i;
 
 export default async function onRequest({ request, env }) {
   try {

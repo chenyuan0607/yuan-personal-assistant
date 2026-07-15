@@ -43,8 +43,10 @@ export default async function onRequest({ request, env }) {
       const objects = blob(env);
       const record = await metadata.get(fileKey(owner.sub, body.id), { type: "json" });
       if (!record) throw new Error("文件不存在");
-      const content = await objects.get(record.blobKey, { type: "arrayBuffer", consistency: "strong" });
-      return new Response(content, { headers: { "content-type": record.type } });
+      const content = typeof objects.bytes === "function"
+        ? await objects.bytes(record.blobKey)
+        : await objects.get(record.blobKey, { type: "arrayBuffer", consistency: "strong" });
+      return new Response(content, { headers: { "content-type": record.type || "application/octet-stream" } });
     }
     if (action === "archive-chat") {
       const archiveDate = String(body.date || "").trim();

@@ -192,6 +192,86 @@ test("file upload stores the blob key returned by the active file store", async 
   }
 });
 
+test("file upload accepts spreadsheet and plain data files for nightly markdown organizing", async () => {
+  const data = new Map();
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const env = {
+    SESSION_SECRET: "secret",
+    YUAN_ASSISTANT_BLOB: {
+      async set(key) { return `cloud://bucket/${key}`; },
+      async delete() {},
+    },
+  };
+  const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+  const form = new FormData();
+  form.append("file", new File(["a,b\n1,2"], "table.csv", { type: "text/csv" }));
+  try {
+    const body = await (await filesHandler({
+      env,
+      request: new Request("https://app.example/api/files", { method: "POST", headers: { authorization: `Bearer ${token}` }, body: form }),
+    })).json();
+    assert.equal(body.ok, true);
+    assert.equal(body.file.status, "waiting");
+    assert.equal(body.file.name, "table.csv");
+  } finally {
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
+test("codex downloads CloudBase files through the bytes adapter for nightly organizing", async () => {
+  const data = new Map([["file_owner_file_1", {
+    id: "file-1",
+    kind: "file",
+    blobKey: "cloud://bucket/file.csv",
+    name: "file.csv",
+    size: 7,
+    sha256: "unused",
+    type: "text/csv",
+    createdAt: "2026-07-15T00:00:00Z",
+    status: "waiting",
+  }]]);
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const env = {
+    SESSION_SECRET: "secret",
+    YUAN_ASSISTANT_BLOB: {
+      async bytes(blobKey) {
+        assert.equal(blobKey, "cloud://bucket/file.csv");
+        return new TextEncoder().encode("a,b\n1,2");
+      },
+    },
+  };
+  const token = await issueToken({ sub: "owner", kind: "codex", exp: 9999999999 }, env.SESSION_SECRET);
+  try {
+    const response = await codexHandler({
+      env,
+      request: new Request("https://app.example/api/codex?action=download", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ id: "file-1" }),
+      }),
+    });
+    assert.equal(response.status, 200);
+    assert.equal(await response.text(), "a,b\n1,2");
+    assert.equal(response.headers.get("content-type"), "text/csv");
+  } finally {
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
 test("chat image message uses the vision model with the uploaded file URL before replying", async () => {
   const uploadedFileId = "11111111-1111-4111-8111-111111111111";
   const data = new Map([

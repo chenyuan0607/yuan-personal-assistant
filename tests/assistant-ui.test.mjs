@@ -266,13 +266,22 @@ test("assistant composer uses a plus button for file upload instead of mic", asy
 
   assert.doesNotMatch(html, /id="assistant-mic"|按住说话|鎸変綇璇磋瘽/);
   assert.match(html, /<label[^>]+id="assistant-upload"[^>]+for="assistant-file"/);
-  assert.match(html, /id="assistant-file"[^>]+accept="image\/\*,\.pdf,\.txt,\.md,\.doc,\.docx"/);
+  assert.match(html, /id="assistant-file"[^>]+accept="image\/\*,\.pdf,\.txt,\.md,\.csv,\.tsv,\.xls,\.xlsx,\.doc,\.docx"/);
   assert.doesNotMatch(html, /id="assistant-file"[^>]+hidden/);
   assert.match(html, /id="assistant-file"[^>]+class="assistant-file-input"/);
   assert.match(html, /aria-label="上传文件"|aria-label="涓婁紶鏂囦欢"/);
   assert.match(html, />\+<\/label>/);
   assert.doesNotMatch(tools, /assistantFile\.click\(\)|uploadEntry\.addEventListener\("click"/);
   assert.match(css, /\.assistant-file-input/);
+});
+
+test("assistant chat leaves enough safe space above the fixed composer and bottom nav", async () => {
+  const css = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+
+  assert.match(css, /\.assistant-view\{[^}]*padding:58px 0 210px/);
+  assert.match(css, /\.assistant-messages\{[^}]*max-height:calc\(100vh - 300px\)/);
+  assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 168px/);
+  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:168px/);
 });
 
 test("assistant sends an uploaded image to chat after file upload succeeds", async () => {
