@@ -28,3 +28,14 @@ test("other view is a weather-first tool hub", () => {
   assert.match(html, /id="assistant-backstage-view"[^>]+hidden/);
   assert.match(html, /id="growth-review-view"[^>]+hidden/);
 });
+
+test("layout resists accidental zoom and stays phone-width on desktop", async () => {
+  const styles = await readFile(new URL("../styles.css", import.meta.url), "utf8");
+
+  assert.match(html, /<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">/);
+  assert.doesNotMatch(html, /user-scalable\s*=\s*no|maximum-scale\s*=\s*1/);
+  assert.match(styles, /html\{[^}]*-webkit-text-size-adjust:100%/);
+  assert.match(styles, /body\{[^}]*overflow-x:hidden/);
+  assert.match(styles, /input,select,button,textarea\{[^}]*font-size:16px/);
+  assert.match(styles, /@media\(min-width:760px\)\{[^}]*\.bottom-nav\{[^}]*width:760px/);
+});
