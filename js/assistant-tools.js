@@ -1,4 +1,4 @@
-const AVATAR_KEY = "yuan-assistant-avatar";
+﻿const AVATAR_KEY = "yuan-assistant-avatar";
 
 export function createAssistantPreferences(storage = localStorage) {
   return {

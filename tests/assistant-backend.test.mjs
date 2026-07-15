@@ -192,6 +192,79 @@ test("file upload stores the blob key returned by the active file store", async 
   }
 });
 
+test("chat image message uses the vision model with the uploaded file URL before replying", async () => {
+  const uploadedFileId = "11111111-1111-4111-8111-111111111111";
+  const data = new Map([
+    ["file_owner_11111111_1111_4111_8111_111111111111", {
+      id: uploadedFileId,
+      kind: "file",
+      blobKey: "cloud://bucket/owner/11111111-1111-4111-8111-111111111111/photo.png",
+      name: "photo.png",
+      size: 100,
+      type: "image/png",
+      createdAt: "2026-07-15T00:00:00Z",
+      status: "waiting",
+    }],
+  ]);
+  globalThis.YUAN_ASSISTANT_KV = {
+    async put(key, value) { data.set(key, typeof value === "string" ? JSON.parse(value) : value); },
+    async get(key) { return data.get(key) ?? null; },
+    async delete(key) { data.delete(key); },
+    async list({ prefix }) {
+      return { complete: true, cursor: null, keys: [...data.keys()].filter((key) => key.startsWith(prefix)).map((key) => ({ key })) };
+    },
+  };
+  const calls = [];
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    const body = JSON.parse(options.body);
+    calls.push({ url, body });
+    if (url === "https://vision.example/chat/completions") {
+      assert.equal(body.model, "glm-4.6v-flash");
+      assert.equal(body.messages[0].content[0].type, "image_url");
+      assert.equal(body.messages[0].content[0].image_url.url, Buffer.from("fake-image-bytes").toString("base64"));
+      return new Response(JSON.stringify({ choices: [{ message: { content: "图片里是一只橘猫。" } }] }), { headers: { "content-type": "application/json" } });
+    }
+    return new Response(JSON.stringify({ choices: [{ message: { content: "我看到了：图片里是一只橘猫。" } }] }), { headers: { "content-type": "application/json" } });
+  };
+  const env = {
+    SESSION_SECRET: "secret",
+    MODEL_ENDPOINT: "https://model.example/chat/completions",
+    MODEL_API_KEY: "text-key",
+    MODEL_NAME: "deepseek",
+    VISION_MODEL_ENDPOINT: "https://vision.example/chat/completions",
+    VISION_MODEL_API_KEY: "vision-key",
+    VISION_MODEL_NAME: "glm-4.6v-flash",
+    YUAN_ASSISTANT_BLOB: {
+      async bytes(blobKey) {
+        assert.equal(blobKey, "cloud://bucket/owner/11111111-1111-4111-8111-111111111111/photo.png");
+        return Buffer.from("prefix-fake-image-bytes-suffix").subarray(7, 23);
+      },
+      async url() {
+        throw new Error("base64 path should be preferred");
+      },
+    },
+  };
+  const token = await issueToken({ sub: "owner", kind: "device", exp: 9999999999 }, env.SESSION_SECRET);
+  try {
+    const body = await (await chatHandler({
+      env,
+      request: new Request("https://app.example/api/chat?date=2026-07-15", {
+        method: "POST",
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: JSON.stringify({ text: "我发了一张图片，请帮我看看。", fileId: uploadedFileId, clientMessageId: "image-12345678" }),
+      }),
+    })).json();
+    assert.equal(body.ok, true);
+    assert.equal(body.messages[0].attachment.name, "photo.png");
+    assert.match(body.messages[1].content, /橘猫/);
+    assert.equal(calls.length, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+    delete globalThis.YUAN_ASSISTANT_KV;
+  }
+});
+
 test("codex can archive a dated chat for nightly sync", async () => {
   const data = new Map([
     ["chat_owner_2026_07_14_user_1", { id: "user-1", role: "user", content: "今天聊了任务", date: "2026-07-14", createdAt: "2026-07-14T01:00:00Z", sources: [] }],

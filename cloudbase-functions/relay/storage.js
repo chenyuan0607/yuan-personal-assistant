@@ -58,5 +58,22 @@ export function createCloudBaseBlob(app, prefix = "yuan-assistant-files") {
     async delete(fileID) {
       await app.deleteFile({ fileList: [fileID] });
     },
+
+    async bytes(fileID) {
+      if (typeof app.downloadFile !== "function") throw new Error("CloudBase file download is not configured");
+      const result = await app.downloadFile({ fileID });
+      const content = result.fileContent || result.FileContent || result.body;
+      if (!content) throw new Error("CloudBase downloaded file is empty");
+      return content;
+    },
+
+    async url(fileID) {
+      if (typeof app.getTempFileURL !== "function") throw new Error("CloudBase temporary file URL is not configured");
+      const result = await app.getTempFileURL({ fileList: [fileID] });
+      const item = result.fileList?.[0] || result.fileList?.find?.((entry) => entry.fileID === fileID);
+      const url = item?.tempFileURL || item?.download_url || item?.url;
+      if (!url) throw new Error("CloudBase temporary file URL is empty");
+      return url;
+    },
   };
 }

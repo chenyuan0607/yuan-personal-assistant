@@ -12,6 +12,7 @@
     "sync:assistant:publish": "node scripts/assistant-sync/run.mjs publish",
     "sync:feedback": "node scripts/feedback-sync/run.mjs",
     "secrets:assistant": "node scripts/assistant-secrets.mjs",
+    "probe:synthapi": "node scripts/synthapi-probe.mjs",
     "token:codex": "node scripts/generate-codex-token.mjs",
     "validate:today": "node scripts/validate-today.mjs"
   },

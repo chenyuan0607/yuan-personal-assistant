@@ -196,6 +196,8 @@ test("assistant chat shell removes the old header and opens a roof tools page", 
   assert.match(html, /id="assistant-menu-avatar"/);
   assert.match(html, /id="assistant-menu-archive"/);
   assert.match(html, /href="https:\/\/platform\.deepseek\.com\/top_up"/);
+  assert.match(html, /href="https:\/\/bigmodel\.cn\/finance-center\/finance\/pay"/);
+  assert.match(html, /识图充值|璇嗗浘鍏呭€?/);
   assert.match(html, /class="assistant-info-list"/);
   assert.match(html, /class="assistant-info-row"/);
   assert.doesNotMatch(html, /assistant-action-grid|assistant-action-card|聊天信息[\s\S]{0,500}assistant-avatar-image/);
@@ -271,4 +273,13 @@ test("assistant composer uses a plus button for file upload instead of mic", asy
   assert.match(html, />\+<\/label>/);
   assert.doesNotMatch(tools, /assistantFile\.click\(\)|uploadEntry\.addEventListener\("click"/);
   assert.match(css, /\.assistant-file-input/);
+});
+
+test("assistant sends an uploaded image to chat after file upload succeeds", async () => {
+  const script = await readFile(new URL("../js/assistant-ui.js", import.meta.url), "utf8");
+
+  assert.match(script, /file\.type\.startsWith\("image\/"\)/);
+  assert.match(script, /api\.sendImageMessage/);
+  assert.match(script, /fileData\.file\.id/);
+  assert.match(script, /我发了一张图片，请帮我看看。|鎴戝彂浜嗕竴寮犲浘鐗囷紝璇峰府鎴戠湅鐪嬨€?/);
 });

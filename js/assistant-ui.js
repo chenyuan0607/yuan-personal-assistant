@@ -175,7 +175,15 @@ export function initAssistant({ baseUrl, root = document, store = createBrowserS
   root.querySelector("#assistant-file").addEventListener("change", async (event) => {
     const file = event.target.files[0]; if (!file) return;
     const form = new FormData(); form.append("file", file); status.textContent = "正在上传…";
-    try { await api.uploadFile(form); event.target.value = ""; await refresh(); }
+    try {
+      const fileData = await api.uploadFile(form);
+      event.target.value = "";
+      if (file.type.startsWith("image/") && fileData.file?.id) {
+        status.textContent = "正在识图中…";
+        await api.sendImageMessage("我发了一张图片，请帮我看看。", fileData.file.id, localDate(), crypto.randomUUID());
+      }
+      await refresh();
+    }
     catch (error) { status.textContent = error.message; }
   });
   menuButton.addEventListener("click", showAssistantMenu);

@@ -12,6 +12,28 @@ export function buildModelMessages({ memory = "", history = [], userText, source
   ];
 }
 
+export function buildImageUnderstandingMessages({ imageUrl, userText }) {
+  return [
+    {
+      role: "user",
+      content: [
+        { type: "image_url", image_url: { url: imageUrl } },
+        { type: "text", text: `${userText || "请帮我看看这张图片。"}\n\n请先提取图片里的关键信息、文字和可见细节，再用简洁中文说明。` },
+      ],
+    },
+  ];
+}
+
+export function buildImageReplyMessages({ memory = "", history = [], userText, imageSummary, currentTime = "" }) {
+  return buildModelMessages({
+    memory,
+    history,
+    userText: `用户发送了一张图片，并说：${userText}\n\n视觉模型识别结果：\n${imageSummary}\n\n请结合图片识别结果回复用户。`,
+    sources: [],
+    currentTime,
+  });
+}
+
 export function buildArchiveMessages(history, date) {
   return [
     {
@@ -38,5 +60,33 @@ export async function callModel(messages, env) {
   const payload = await response.json();
   const content = payload.choices?.[0]?.message?.content ?? payload.output_text ?? "";
   if (!content) throw new Error("AI没有返回内容");
+  return content;
+}
+
+export async function callVisionModel(messages, env) {
+  if (!env.VISION_MODEL_ENDPOINT || !env.VISION_MODEL_API_KEY || !env.VISION_MODEL_NAME) {
+    throw new Error("识图模型尚未配置");
+  }
+  const response = await fetch(env.VISION_MODEL_ENDPOINT, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${env.VISION_MODEL_API_KEY}`,
+    },
+    body: JSON.stringify({ model: env.VISION_MODEL_NAME, messages, thinking: { type: "disabled" }, stream: false }),
+  });
+  if (!response.ok) {
+    let detail = "";
+    try {
+      const payload = await response.json();
+      detail = payload.error?.message || payload.message || "";
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    throw new Error(`识图暂时无法完成${detail ? `：${String(detail).slice(0, 80)}` : ""}`);
+  }
+  const payload = await response.json();
+  const content = payload.choices?.[0]?.message?.content ?? payload.output_text ?? "";
+  if (!content) throw new Error("识图模型没有返回内容");
   return content;
 }

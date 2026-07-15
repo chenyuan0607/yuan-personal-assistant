@@ -1,12 +1,24 @@
 import { requireAuth } from "./auth.js";
 import { errorJson, json, readJson } from "../_lib/http.js";
 import { archiveKey, chatKey, chatPrefix, deferredLinkMessage, validateMessage } from "../_lib/records.js";
-import { kv, listJson } from "../_lib/storage.js";
-import { buildArchiveMessages, buildModelMessages, callModel } from "../_lib/model.js";
+import { blob, kv, listJson } from "../_lib/storage.js";
+import { buildArchiveMessages, buildImageReplyMessages, buildImageUnderstandingMessages, buildModelMessages, callModel, callVisionModel } from "../_lib/model.js";
+import { fileKey } from "../_lib/records.js";
 import { needsSearch, searchWeb } from "../_lib/search.js";
 
 const memoryLatestKey = (ownerId) => `memory_${ownerId}_latest`;
 const memoryIndexKey = (ownerId) => `memory_${ownerId}_index`;
+const bytesToBase64 = (bytes) => {
+  const array = bytes instanceof ArrayBuffer
+    ? new Uint8Array(bytes)
+    : ArrayBuffer.isView(bytes)
+      ? new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+      : new Uint8Array(bytes);
+  if (typeof Buffer !== "undefined") return Buffer.from(array).toString("base64");
+  let binary = "";
+  for (const byte of array) binary += String.fromCharCode(byte);
+  return btoa(binary);
+};
 const currentTimeText = (now = new Date()) => `${new Intl.DateTimeFormat("zh-CN", {
   timeZone: "Asia/Shanghai",
   year: "numeric",
@@ -60,6 +72,8 @@ export default async function onRequest({ request, env }) {
     }
     if (action !== "send") throw new Error("未知操作");
     const userText = validateMessage(body.text);
+    const fileId = body.fileId;
+    if (fileId && !/^[a-zA-Z0-9-]{8,80}$/.test(fileId)) throw new Error("文件编号无效");
     const clientMessageId = body.clientMessageId;
     if (!/^[a-zA-Z0-9-]{8,80}$/.test(clientMessageId || "")) throw new Error("消息编号无效");
     const userKey = chatKey(owner.sub, date, clientMessageId);
@@ -69,8 +83,23 @@ export default async function onRequest({ request, env }) {
     const existingAssistant = await getJson(store, assistantKey);
     if (userRecord && existingAssistant) return json({ ok: true, duplicate: true, messages: [userRecord, existingAssistant] });
     const history = await listJson(chatPrefix(owner.sub, date), store);
+    let fileRecord = null;
+    if (fileId) {
+      fileRecord = await getJson(store, fileKey(owner.sub, fileId));
+      if (!fileRecord) throw new Error("文件不存在");
+      if (!String(fileRecord.type || "").startsWith("image/")) throw new Error("目前只有图片可以发给AI识别");
+      if (Number(fileRecord.size || 0) > 10 * 1024 * 1024) throw new Error("识图图片需要小于10MB");
+    }
     if (!userRecord) {
-      userRecord = { id: clientMessageId, role: "user", content: userText, date, createdAt: new Date().toISOString(), sources: [] };
+      userRecord = {
+        id: clientMessageId,
+        role: "user",
+        content: fileRecord ? `${userText}\n[图片：${fileRecord.name}]` : userText,
+        date,
+        createdAt: new Date().toISOString(),
+        sources: [],
+        ...(fileRecord ? { attachment: { id: fileRecord.id, name: fileRecord.name, type: fileRecord.type } } : {}),
+      };
       await store.put(userKey, JSON.stringify(userRecord));
     }
     if (deferredLinkMessage(userText)) {
@@ -80,7 +109,18 @@ export default async function onRequest({ request, env }) {
     }
     const memory = await store.get(memoryLatestKey(owner.sub)) || "";
     const sources = needsSearch(userText) ? await searchWeb(userText, env) : [];
-    const answer = await callModel(buildModelMessages({ memory, history, userText, sources, currentTime: currentTimeText() }), env);
+    let answer;
+    if (fileRecord) {
+      const objects = blob(env);
+      let imageUrl;
+      if (typeof objects.bytes === "function") imageUrl = bytesToBase64(await objects.bytes(fileRecord.blobKey));
+      else if (typeof objects.url === "function") imageUrl = await objects.url(fileRecord.blobKey);
+      else throw new Error("文件读取能力尚未配置");
+      const imageSummary = await callVisionModel(buildImageUnderstandingMessages({ imageUrl, userText }), env);
+      answer = await callModel(buildImageReplyMessages({ memory, history, userText, imageSummary, currentTime: currentTimeText() }), env);
+    } else {
+      answer = await callModel(buildModelMessages({ memory, history, userText, sources, currentTime: currentTimeText() }), env);
+    }
     const assistantRecord = { id: assistantId, role: "assistant", content: answer, date, createdAt: new Date().toISOString(), sources };
     await store.put(assistantKey, JSON.stringify(assistantRecord));
     return json({ ok: true, messages: [userRecord, assistantRecord] });
