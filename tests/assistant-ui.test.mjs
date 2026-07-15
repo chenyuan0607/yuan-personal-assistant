@@ -433,8 +433,8 @@ test("assistant composer overlays chat without a reserved gray spacer", async ()
   assert.match(css, /\.assistant-messages\{[^}]*max-height:none/);
   assert.doesNotMatch(css, /\.assistant-messages\{[^}]*100dvh/);
   assert.match(css, /\.assistant-messages\{[^}]*margin:0/);
-  assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 38px/);
-  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:38px/);
+  assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 36px/);
+  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:36px/);
   assert.match(css, /\.assistant-messages\{[^}]*display:flex/);
   assert.match(css, /\.assistant-messages\{[^}]*flex-direction:column/);
   assert.match(css, /\.assistant-messages::before\{content:"";margin-top:auto\}/);
