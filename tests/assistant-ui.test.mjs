@@ -280,8 +280,9 @@ test("assistant chat leaves enough safe space above the fixed composer and botto
 
   assert.match(css, /\.assistant-view\{[^}]*padding:58px 0 210px/);
   assert.match(css, /\.assistant-messages\{[^}]*max-height:calc\(100vh - 300px\)/);
-  assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 168px/);
-  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:168px/);
+  assert.match(css, /\.assistant-messages\{[^}]*padding:8px 8px 36px/);
+  assert.match(css, /\.assistant-messages\{[^}]*scroll-padding-bottom:120px/);
+  assert.doesNotMatch(css, /\.assistant-messages\{[^}]*padding:8px 8px 1[0-9]{2}px/);
 });
 
 test("assistant sends an uploaded image to chat after file upload succeeds", async () => {
