@@ -9,7 +9,8 @@ test("focus mode hides the bottom navigation when the hidden attribute is set", 
 
 test("service worker cache version includes the latest assistant shell", async () => {
   const worker = await readFile(new URL("../service-worker.js", import.meta.url), "utf8");
-  assert.match(worker, /yuan-assistant-v34/);
+  assert.match(worker, /yuan-assistant-v35/);
+  assert.match(worker, /\.\/js\/work-notifications\.js/);
   assert.match(worker, /event\.request\.mode === "navigate"/);
   assert.match(worker, /fetch\(event\.request\).*caches\.match/s);
 });
