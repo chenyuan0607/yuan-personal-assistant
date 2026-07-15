@@ -43,6 +43,7 @@ const flushPendingFeedback = async () => {
 };
 const queueFeedback = async (record) => { pomodoroStore.addResult(record); await flushPendingFeedback(); };
 const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore, onSession: flushPendingFeedback, onMenu: (viewId = "assistant-menu-view") => showView(viewId) });
+if (!document.querySelector("#assistant-view")?.hidden) await assistantRefresh();
 pomodoro = initPomodoro({
   store: pomodoroStore,
   getDeviceName: assistantStore.deviceName,

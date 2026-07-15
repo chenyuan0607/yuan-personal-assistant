@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const appScript = await readFile(new URL("../js/app.js", import.meta.url), "utf8");
 
 test("formal page points assistant requests to the current CloudBase relay", () => {
   assert.match(html, /<html[^>]+data-assistant-api="https:\/\/yuan-assistant-test-d2bd198841e7\.service\.tcloudbase\.com"/);
@@ -16,6 +17,8 @@ test("navigation opens assistant by default and orders today, assistant, ledger,
   assert.doesNotMatch(html, /<section id="assistant-view"[^>]*hidden/);
   assert.match(nav, /id="assistant-tab" class="active"/);
   assert.doesNotMatch(nav, /id="today-tab" class="active"/);
+  assert.match(appScript, /querySelector\("#assistant-view"\)\?\.hidden/);
+  assert.match(appScript, /await assistantRefresh\(\)/);
 });
 
 test("top bar and temporary transfer are removed", () => {
