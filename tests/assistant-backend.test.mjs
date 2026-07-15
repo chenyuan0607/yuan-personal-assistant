@@ -92,6 +92,50 @@ test("search adapter uses configured provider or default lightweight web search"
   }
 });
 
+test("search adapter supports Zhipu BigModel web search", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestBody;
+  globalThis.fetch = async (url, options = {}) => {
+    assert.equal(String(url), "https://open.bigmodel.cn/api/paas/v4/web_search");
+    assert.equal(options.method, "POST");
+    assert.equal(options.headers.authorization, "Bearer zhipu-key");
+    requestBody = JSON.parse(options.body);
+    return new Response(JSON.stringify({
+      search_result: [{
+        title: "智谱搜索结果",
+        link: "https://example.com/zhipu",
+        content: "适合 AI 处理的网页摘要",
+        publish_date: "2026-07-15",
+      }],
+    }), { headers: { "content-type": "application/json" } });
+  };
+  try {
+    const results = await searchWeb("今天抖音热点有哪些", {
+      SEARCH_PROVIDER: "zhipu",
+      SEARCH_ENDPOINT: "https://open.bigmodel.cn/api/paas/v4/web_search",
+      SEARCH_API_KEY: "zhipu-key",
+      SEARCH_ENGINE: "search_std",
+    });
+    assert.deepEqual(requestBody, {
+      search_query: "今天抖音热点有哪些",
+      search_engine: "search_std",
+      search_intent: false,
+      count: 5,
+      search_recency_filter: "oneDay",
+      content_size: "medium",
+      user_id: "yuan_assistant_owner",
+    });
+    assert.deepEqual(results, [{
+      title: "智谱搜索结果",
+      url: "https://example.com/zhipu",
+      snippet: "适合 AI 处理的网页摘要",
+      date: "2026-07-15",
+    }]);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test("default search falls back to a public search page when lightweight search fails", async () => {
   const originalFetch = globalThis.fetch;
   const calls = [];

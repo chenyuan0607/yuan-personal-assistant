@@ -9,13 +9,14 @@ export function needsSearch(text) {
 const normalizeResults = (payload) => {
   const items = Array.isArray(payload?.results) ? payload.results
     : Array.isArray(payload?.data) ? payload.data
-      : Array.isArray(payload) ? payload
-        : [];
+      : Array.isArray(payload?.search_result) ? payload.search_result
+        : Array.isArray(payload) ? payload
+          : [];
   return items.slice(0, 5).map((item) => ({
     title: item.title || item.name || "搜索结果",
     url: item.url || item.link || "",
     snippet: item.snippet || item.content || item.description || "",
-    date: item.date || item.publishedDate || item.published_at || "",
+    date: item.date || item.publishedDate || item.published_at || item.publish_date || "",
   })).filter((item) => item.title || item.url || item.snippet);
 };
 
@@ -94,16 +95,31 @@ async function defaultSearch(query) {
   throw new Error("联网搜索暂时不可用");
 }
 
+const inferRecencyFilter = (query) => {
+  if (/今天|今日/.test(query)) return "oneDay";
+  if (/最近|最新|当前|现在|热点|热榜|流行|趋势/.test(query)) return "oneWeek";
+  return "noLimit";
+};
+
 export async function searchWeb(query, env) {
   const hasProvider = Boolean(env.SEARCH_ENDPOINT);
   if (!hasProvider) return defaultSearch(query);
+  const isZhipu = env.SEARCH_PROVIDER === "zhipu" || /bigmodel\.cn\/api\/paas\/v4\/web_search/.test(env.SEARCH_ENDPOINT);
   const response = await fetch(env.SEARCH_ENDPOINT, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         ...(env.SEARCH_API_KEY ? { authorization: `Bearer ${env.SEARCH_API_KEY}` } : {}),
       },
-      body: JSON.stringify({ query, limit: 5 }),
+      body: JSON.stringify(isZhipu ? {
+        search_query: query,
+        search_engine: env.SEARCH_ENGINE || "search_std",
+        search_intent: false,
+        count: Number(env.SEARCH_COUNT || 5),
+        search_recency_filter: env.SEARCH_RECENCY_FILTER || inferRecencyFilter(query),
+        content_size: env.SEARCH_CONTENT_SIZE || "medium",
+        user_id: "yuan_assistant_owner",
+      } : { query, limit: 5 }),
     });
   if (!response.ok) throw new Error("联网搜索暂时不可用");
   const payload = await response.json();
