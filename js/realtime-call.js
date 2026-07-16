@@ -149,6 +149,18 @@ export function realtimeEventToTranscript(event) {
   return null;
 }
 
+export function realtimeUrlProblem(url, pageProtocol = globalThis.location?.protocol || "https:") {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "通话服务地址格式不正确";
+  }
+  if (!["ws:", "wss:"].includes(parsed.protocol)) return "通话服务地址格式不正确";
+  if (pageProtocol === "https:" && parsed.protocol !== "wss:") return "通话服务还不是安全连接，需要换成 WSS 正式地址";
+  return null;
+}
+
 const REALTIME_INSTRUCTIONS = [
   "你叫青青，是缘的私人网页 AI 助手。",
   "说话自然、温柔、像熟悉的姐姐或女朋友，不要机械客服口吻。",
@@ -214,6 +226,18 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
     ending = false;
   };
 
+  const failStart = async (message) => {
+    if (timerId) clearInterval(timerId);
+    timerId = null;
+    try { micSender?.setEnabled(false); } catch {}
+    try { socket?.close(1000, "setup-failed"); } catch {}
+    try { await micSender?.stop(); } catch {}
+    try { await audioPlayer?.stop(); } catch {}
+    try { stream?.getTracks().forEach((track) => track.stop()); } catch {}
+    current.textContent = message;
+    status.textContent = message;
+  };
+
   const setTextMode = (enabled) => {
     textMode = Boolean(enabled);
     textForm.hidden = !textMode;
@@ -271,6 +295,11 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
         date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }),
       });
       audioPlayer = createAudioPlayer();
+      const urlProblem = realtimeUrlProblem(session.url);
+      if (urlProblem) {
+        await failStart(urlProblem);
+        return;
+      }
       socket = new WebSocket(session.url, session.protocols?.length ? session.protocols : undefined);
       socket.onopen = async () => {
         status.textContent = "正在听你说话";

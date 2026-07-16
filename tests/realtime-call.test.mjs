@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { createTranscriptBuffer, realtimeEventToTranscript } from "../js/realtime-call.js";
+import { createTranscriptBuffer, realtimeEventToTranscript, realtimeUrlProblem } from "../js/realtime-call.js";
 import { createAssistantApi } from "../js/assistant-api.js";
 import realtimeHandler from "../edge-functions/api/realtime.js";
 import { issueToken } from "../edge-functions/_lib/crypto.js";
@@ -28,6 +28,13 @@ test("Alibaba realtime completion events become transcript rows", () => {
     content: "六枝今天很舒服。",
   });
   assert.equal(realtimeEventToTranscript({ type: "response.audio.delta", delta: "..." }), null);
+});
+
+test("https pages explain when realtime websocket is not secure", () => {
+  assert.equal(realtimeUrlProblem("ws://omni-realtime.example/ws", "https:"), "通话服务还不是安全连接，需要换成 WSS 正式地址");
+  assert.equal(realtimeUrlProblem("wss://omni-realtime.example/ws", "https:"), null);
+  assert.equal(realtimeUrlProblem("ws://localhost:8787/ws", "http:"), null);
+  assert.equal(realtimeUrlProblem("https://omni-realtime.example/ws", "https:"), "通话服务地址格式不正确");
 });
 
 test("assistant API requests a short call session and stores its text", async () => {

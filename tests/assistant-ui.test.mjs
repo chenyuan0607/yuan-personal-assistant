@@ -494,6 +494,6 @@ test("assistant call button sits on the left side of the chat roof", async () =>
   assert.match(css, /\.assistant-chat-topbar\{[^}]*position:fixed/);
   assert.match(css, /\.assistant-call-button\{[^}]*position:absolute[^}]*left:0/);
   assert.match(css, /#assistant-menu\{[^}]*position:absolute[^}]*right:0/);
-  assert.match(worker, /yuan-assistant-v42-call-left/);
+  assert.match(worker, /yuan-assistant-v43-realtime-wss-check/);
   assert.match(worker, /"\.\/js\/realtime-call\.js"/);
 });
