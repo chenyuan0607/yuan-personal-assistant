@@ -459,29 +459,18 @@ test("assistant sends an uploaded image to chat after file upload succeeds", asy
   assert.match(script, /我发了一张图片，请帮我看看。|鎴戝彂浜嗕竴寮犲浘鐗囷紝璇峰府鎴戠湅鐪嬨€?/);
 });
 
-test("assistant opens a full-screen Qingqing call with subtitles and text mode", async () => {
-  const [html, app, call, css] = await Promise.all([
+test("assistant chat page does not expose the realtime call feature", async () => {
+  const [html, app, worker] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../js/app.js", import.meta.url), "utf8"),
-    readFile(new URL("../js/realtime-call.js", import.meta.url), "utf8"),
-    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../service-worker.js", import.meta.url), "utf8"),
   ]);
 
-  assert.match(html, /id="assistant-call"/);
-  assert.match(html, /id="realtime-call-view"/);
-  assert.match(html, /id="realtime-caption-toggle"/);
-  assert.match(html, /id="realtime-close"/);
-  assert.match(html, /id="realtime-text-toggle"/);
-  assert.match(html, /id="realtime-hangup"/);
-  assert.match(html, /id="realtime-transcript"/);
-  assert.match(app, /initRealtimeCall/);
-  assert.match(call, /getUserMedia/);
-  assert.match(call, /saveRealtimeTranscript/);
-  assert.match(call, /connectionTimeoutId/);
-  assert.match(call, /closeButton\.addEventListener\("click", stop\)/);
-  assert.match(css, /\.realtime-call-view/);
-  assert.match(css, /\.realtime-call-view\.captions/);
-  assert.match(css, /#realtime-close/);
+  assert.doesNotMatch(html, /id="assistant-call"/);
+  assert.doesNotMatch(html, /id="realtime-call-view"/);
+  assert.doesNotMatch(app, /initRealtimeCall/);
+  assert.doesNotMatch(app, /realtime-call\.js/);
+  assert.doesNotMatch(worker, /"\.\/js\/realtime-call\.js"/);
 });
 
 test("other hub exposes PWA install and update controls", async () => {
@@ -501,12 +490,12 @@ test("other hub exposes PWA install and update controls", async () => {
   assert.match(pwa, /appinstalled/);
   assert.match(pwa, /registration\.waiting\.postMessage\(\{ type: "SKIP_WAITING" \}\)/);
   assert.match(css, /\.tool-entry\.pwa-ready/);
-  assert.match(worker, /yuan-assistant-v45-pwa-app-shell/);
+  assert.match(worker, /yuan-assistant-v46-no-realtime-call/);
   assert.match(worker, /addEventListener\("message"/);
   assert.match(worker, /skipWaiting\(\)/);
 });
 
-test("assistant call button sits on the left side of the chat roof", async () => {
+test("assistant chat roof keeps only the title and menu button", async () => {
   const [html, css, worker] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../styles.css", import.meta.url), "utf8"),
@@ -514,12 +503,11 @@ test("assistant call button sits on the left side of the chat roof", async () =>
   ]);
 
   const topbar = html.match(/<header class="assistant-chat-topbar">[\s\S]*?<\/header>/)?.[0] || "";
-  assert.match(topbar, /id="assistant-call"[^>]+class="assistant-menu-button assistant-call-button"/);
-  assert.match(topbar, /id="assistant-call"[\s\S]*<h2 id="assistant-title"[\s\S]*id="assistant-menu"/);
+  assert.doesNotMatch(topbar, /id="assistant-call"/);
+  assert.match(topbar, /<h2 id="assistant-title"[\s\S]*id="assistant-menu"/);
   assert.doesNotMatch(topbar, /assistant-top-actions/);
   assert.match(css, /\.assistant-chat-topbar\{[^}]*position:fixed/);
-  assert.match(css, /\.assistant-call-button\{[^}]*position:absolute[^}]*left:0/);
   assert.match(css, /#assistant-menu\{[^}]*position:absolute[^}]*right:0/);
-  assert.match(worker, /yuan-assistant-v45-pwa-app-shell/);
-  assert.match(worker, /"\.\/js\/realtime-call\.js"/);
+  assert.match(worker, /yuan-assistant-v46-no-realtime-call/);
+  assert.doesNotMatch(worker, /"\.\/js\/realtime-call\.js"/);
 });

@@ -9,7 +9,6 @@ import { createPomodoroStore } from "./pomodoro-store.js";
 import { initPomodoro } from "./pomodoro-ui.js";
 import { initWeather } from "./weather.js";
 import { initWorkNotifications } from "./work-notifications.js";
-import { initRealtimeCall } from "./realtime-call.js";
 import { initPwaApp } from "./pwa-app.js";
 
 const showView = (viewId) => {
@@ -24,7 +23,6 @@ const isAssistantRecoveryLaunch = () => (
 
 const forceAssistantView = () => {
   showView("assistant-view");
-  document.querySelector("#realtime-call-view")?.setAttribute("hidden", "");
   document.querySelectorAll(".bottom-nav button").forEach((button) => button.classList.remove("active"));
   document.querySelector("#assistant-tab")?.classList.add("active");
 };
@@ -64,7 +62,6 @@ const flushPendingFeedback = async () => {
 };
 const queueFeedback = async (record) => { pomodoroStore.addResult(record); await flushPendingFeedback(); };
 const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore, onSession: flushPendingFeedback, onMenu: (viewId = "assistant-menu-view") => showView(viewId) });
-initRealtimeCall({ api: feedbackApi, onExit: () => { showView("assistant-view"); assistantRefresh(); } });
 refreshWorkNotifications = initWorkNotifications({ api: feedbackApi });
 if (isAssistantRecoveryLaunch()) forceAssistantView();
 if (!document.querySelector("#assistant-view")?.hidden) await assistantRefresh();

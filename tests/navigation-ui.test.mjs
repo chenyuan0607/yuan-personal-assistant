@@ -22,12 +22,12 @@ test("navigation opens assistant by default and orders today, assistant, ledger,
   assert.match(appScript, /await assistantRefresh\(\)/);
 });
 
-test("recovery launch forces the assistant chat instead of the realtime call", () => {
+test("assistant hash launch forces the assistant chat without realtime call UI", () => {
   assert.match(appScript, /recover=assistant/);
   assert.match(appScript, /location\.hash === "#assistant"/);
   assert.match(appScript, /showView\("assistant-view"\)/);
   assert.match(appScript, /#assistant-tab/);
-  assert.match(appScript, /#realtime-call-view/);
+  assert.doesNotMatch(html, /id="realtime-call-view"/);
 });
 
 test("top bar and temporary transfer are removed", () => {
