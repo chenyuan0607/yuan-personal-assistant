@@ -484,6 +484,28 @@ test("assistant opens a full-screen Qingqing call with subtitles and text mode",
   assert.match(css, /#realtime-close/);
 });
 
+test("other hub exposes PWA install and update controls", async () => {
+  const [html, app, pwa, css, worker] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../js/pwa-app.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../service-worker.js", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(html, /id="pwa-install-card"/);
+  assert.match(html, /id="pwa-install-status"/);
+  assert.match(app, /import \{ initPwaApp \} from "\.\/pwa-app\.js"/);
+  assert.match(app, /initPwaApp\(/);
+  assert.match(pwa, /beforeinstallprompt/);
+  assert.match(pwa, /appinstalled/);
+  assert.match(pwa, /registration\.waiting\.postMessage\(\{ type: "SKIP_WAITING" \}\)/);
+  assert.match(css, /\.tool-entry\.pwa-ready/);
+  assert.match(worker, /yuan-assistant-v45-pwa-app-shell/);
+  assert.match(worker, /addEventListener\("message"/);
+  assert.match(worker, /skipWaiting\(\)/);
+});
+
 test("assistant call button sits on the left side of the chat roof", async () => {
   const [html, css, worker] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
@@ -498,6 +520,6 @@ test("assistant call button sits on the left side of the chat roof", async () =>
   assert.match(css, /\.assistant-chat-topbar\{[^}]*position:fixed/);
   assert.match(css, /\.assistant-call-button\{[^}]*position:absolute[^}]*left:0/);
   assert.match(css, /#assistant-menu\{[^}]*position:absolute[^}]*right:0/);
-  assert.match(worker, /yuan-assistant-v44-call-exit-timeout/);
+  assert.match(worker, /yuan-assistant-v45-pwa-app-shell/);
   assert.match(worker, /"\.\/js\/realtime-call\.js"/);
 });

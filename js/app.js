@@ -10,6 +10,7 @@ import { initPomodoro } from "./pomodoro-ui.js";
 import { initWeather } from "./weather.js";
 import { initWorkNotifications } from "./work-notifications.js";
 import { initRealtimeCall } from "./realtime-call.js";
+import { initPwaApp } from "./pwa-app.js";
 
 const showView = (viewId) => {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== viewId; });
@@ -66,6 +67,7 @@ if (planResult[0].status === "fulfilled") {
 }
 await initReview(planResult[0].status === "fulfilled" ? planResult[0].value : null);
 initWeather();
+initPwaApp();
 await flushPendingFeedback();
 
 if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
