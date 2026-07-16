@@ -66,3 +66,14 @@ test("manifest is installable as Qingqing app shell", () => {
   assert.ok(manifest.icons.every((icon) => icon.purpose === "any maskable"));
   assert.equal(manifest.screenshots[0].form_factor, "narrow");
 });
+
+test("emergency reset page clears stuck PWA state", async () => {
+  const reset = await readFile(new URL("../reset.html", import.meta.url), "utf8");
+
+  assert.match(reset, /退出卡住的通话页/);
+  assert.match(reset, /navigator\.serviceWorker\.getRegistrations/);
+  assert.match(reset, /registration\.unregister\(\)/);
+  assert.match(reset, /caches\.keys\(\)/);
+  assert.match(reset, /caches\.delete\(key\)/);
+  assert.match(reset, /location\.replace\("\.\/#assistant"\)/);
+});

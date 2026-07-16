@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#171b20">
+  <title>退出卡住的通话页</title>
+  <style>
+    :root { font-family: "Microsoft YaHei", system-ui, sans-serif; color: #fff; background: #171b20; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+    main { width: min(92vw, 420px); display: grid; gap: 16px; text-align: center; }
+    h1 { margin: 0; font-size: 24px; }
+    p { margin: 0; color: #cbd5dd; line-height: 1.7; }
+    button, a { min-height: 44px; border: 0; border-radius: 999px; padding: 0 18px; color: #111; background: #b8ec96; font: inherit; text-decoration: none; display: grid; place-items: center; }
+    small { color: #8fa0ad; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>正在退出卡住的通话页</h1>
+    <p id="status">我会清掉旧网页缓存，然后带你回到青青助手。</p>
+    <button id="reset-button" type="button">手动再试一次</button>
+    <a href="./#assistant">直接回到助手</a>
+    <small>这不会删除你的云端聊天记录，只是清理这个网页在浏览器里的旧缓存。</small>
+  </main>
+  <script>
+    async function resetStuckApp() {
+      const status = document.querySelector("#status");
+      try {
+        status.textContent = "正在关闭旧网页服务…";
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+        status.textContent = "正在清理旧缓存…";
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+        status.textContent = "完成，正在返回青青助手…";
+        setTimeout(() => location.replace("./#assistant"), 500);
+      } catch (error) {
+        status.textContent = "自动清理失败了，请关闭当前标签页后重新打开网页。";
+      }
+    }
+    document.querySelector("#reset-button").addEventListener("click", resetStuckApp);
+    resetStuckApp();
+  </script>
+</body>
+</html>

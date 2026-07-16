@@ -16,6 +16,7 @@ test("CloudBase test site injects its API and copies only public assets", async 
   await mkdir(join(sourceDir, "assets", "stickers"), { recursive: true });
   await mkdir(join(sourceDir, ".assistant-secrets"), { recursive: true });
   await writeFile(join(sourceDir, "index.html"), '<!doctype html><html lang="zh-CN"><body></body></html>');
+  await writeFile(join(sourceDir, "reset.html"), '<!doctype html><html lang="zh-CN"><body>reset</body></html>');
   await writeFile(join(sourceDir, "styles.css"), "body { color: black; }");
   await writeFile(join(sourceDir, "service-worker.js"), "const CACHE = 'test';");
   await writeFile(join(sourceDir, "manifest.webmanifest"), "{}");
@@ -33,6 +34,7 @@ test("CloudBase test site injects its API and copies only public assets", async 
   assert.equal(result.apiUrl, apiUrl);
   assert.match(html, /<html lang="zh-CN" data-assistant-api="https:\/\/relay\.example\.com">/);
   assert.equal((html.match(/data-assistant-api=/g) ?? []).length, 1);
+  assert.match(await readFile(join(outputDir, "reset.html"), "utf8"), /reset/);
   assert.equal(await readFile(join(outputDir, "js", "app.js"), "utf8"), "export {};");
   assert.match(await readFile(join(outputDir, "assets", "stickers", "manifest.json"), "utf8"), /"stickers"/);
   await assert.rejects(readFile(join(outputDir, ".assistant-secrets", "key.txt"), "utf8"), { code: "ENOENT" });
