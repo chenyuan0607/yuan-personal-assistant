@@ -470,14 +470,18 @@ test("assistant opens a full-screen Qingqing call with subtitles and text mode",
   assert.match(html, /id="assistant-call"/);
   assert.match(html, /id="realtime-call-view"/);
   assert.match(html, /id="realtime-caption-toggle"/);
+  assert.match(html, /id="realtime-close"/);
   assert.match(html, /id="realtime-text-toggle"/);
   assert.match(html, /id="realtime-hangup"/);
   assert.match(html, /id="realtime-transcript"/);
   assert.match(app, /initRealtimeCall/);
   assert.match(call, /getUserMedia/);
   assert.match(call, /saveRealtimeTranscript/);
+  assert.match(call, /connectionTimeoutId/);
+  assert.match(call, /closeButton\.addEventListener\("click", stop\)/);
   assert.match(css, /\.realtime-call-view/);
   assert.match(css, /\.realtime-call-view\.captions/);
+  assert.match(css, /#realtime-close/);
 });
 
 test("assistant call button sits on the left side of the chat roof", async () => {
@@ -494,6 +498,6 @@ test("assistant call button sits on the left side of the chat roof", async () =>
   assert.match(css, /\.assistant-chat-topbar\{[^}]*position:fixed/);
   assert.match(css, /\.assistant-call-button\{[^}]*position:absolute[^}]*left:0/);
   assert.match(css, /#assistant-menu\{[^}]*position:absolute[^}]*right:0/);
-  assert.match(worker, /yuan-assistant-v43-realtime-wss-check/);
+  assert.match(worker, /yuan-assistant-v44-call-exit-timeout/);
   assert.match(worker, /"\.\/js\/realtime-call\.js"/);
 });

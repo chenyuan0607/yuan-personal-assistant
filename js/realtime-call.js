@@ -175,6 +175,7 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
   const current = root.querySelector("#realtime-current");
   const timer = root.querySelector("#realtime-call-view header span");
   const captionToggle = root.querySelector("#realtime-caption-toggle");
+  const closeButton = root.querySelector("#realtime-close");
   const textToggle = root.querySelector("#realtime-text-toggle");
   const textForm = root.querySelector("#realtime-text-form");
   const textInput = root.querySelector("#realtime-text-input");
@@ -190,6 +191,8 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
   let ending = false;
   let textMode = false;
   let timerId = null;
+  let connectionTimeoutId = null;
+  let callAttempt = 0;
   let startedAt = 0;
 
   const save = () => {
@@ -213,8 +216,11 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
   const stop = async () => {
     if (ending) return;
     ending = true;
+    callAttempt += 1;
     if (timerId) clearInterval(timerId);
     timerId = null;
+    if (connectionTimeoutId) clearTimeout(connectionTimeoutId);
+    connectionTimeoutId = null;
     try { micSender?.setEnabled(false); } catch {}
     try { socket?.close(1000, "hangup"); } catch {}
     try { await micSender?.stop(); } catch {}
@@ -229,6 +235,8 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
   const failStart = async (message) => {
     if (timerId) clearInterval(timerId);
     timerId = null;
+    if (connectionTimeoutId) clearTimeout(connectionTimeoutId);
+    connectionTimeoutId = null;
     try { micSender?.setEnabled(false); } catch {}
     try { socket?.close(1000, "setup-failed"); } catch {}
     try { await micSender?.stop(); } catch {}
@@ -278,6 +286,7 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
   };
 
   const startCall = async () => {
+    const attempt = ++callAttempt;
     view.hidden = false;
     view.classList.remove("captions");
     list.replaceChildren();
@@ -286,10 +295,17 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
     timer.textContent = "00:00";
     textForm.hidden = true;
     textMode = false;
+    if (connectionTimeoutId) clearTimeout(connectionTimeoutId);
+    connectionTimeoutId = setTimeout(() => {
+      if (attempt !== callAttempt || view.hidden || socket?.readyState === WebSocket.OPEN) return;
+      failStart("通话连接超时，请先退出，等我换好 WSS 正式地址再试").catch(() => {});
+    }, 8000);
     try {
       if (!navigator.mediaDevices?.getUserMedia) throw new Error("当前浏览器不支持麦克风");
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      if (attempt !== callAttempt) return;
       session = await api.startRealtimeCall().then((result) => result.session);
+      if (attempt !== callAttempt) return;
       buffer = createTranscriptBuffer({
         sessionId: session.id,
         date: new Date().toLocaleDateString("en-CA", { timeZone: "Asia/Shanghai" }),
@@ -302,6 +318,8 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
       }
       socket = new WebSocket(session.url, session.protocols?.length ? session.protocols : undefined);
       socket.onopen = async () => {
+        if (connectionTimeoutId) clearTimeout(connectionTimeoutId);
+        connectionTimeoutId = null;
         status.textContent = "正在听你说话";
         startedAt = Date.now();
         timer.textContent = "00:00";
@@ -347,6 +365,7 @@ export function initRealtimeCall({ root = document, api, onExit = () => {} }) {
 
   startButton.addEventListener("click", startCall);
   hangup.addEventListener("click", stop);
+  closeButton.addEventListener("click", stop);
   captionToggle.addEventListener("click", () => view.classList.toggle("captions"));
   textToggle.addEventListener("click", () => setTextMode(textForm.hidden));
   textForm.addEventListener("submit", (event) => {
