@@ -481,15 +481,19 @@ test("assistant opens a full-screen Qingqing call with subtitles and text mode",
 });
 
 test("assistant call button sits on the left side of the chat roof", async () => {
-  const [html, css] = await Promise.all([
+  const [html, css, worker] = await Promise.all([
     readFile(new URL("../index.html", import.meta.url), "utf8"),
     readFile(new URL("../styles.css", import.meta.url), "utf8"),
+    readFile(new URL("../service-worker.js", import.meta.url), "utf8"),
   ]);
 
   const topbar = html.match(/<header class="assistant-chat-topbar">[\s\S]*?<\/header>/)?.[0] || "";
   assert.match(topbar, /id="assistant-call"[^>]+class="assistant-menu-button assistant-call-button"/);
   assert.match(topbar, /id="assistant-call"[\s\S]*<h2 id="assistant-title"[\s\S]*id="assistant-menu"/);
   assert.doesNotMatch(topbar, /assistant-top-actions/);
-  assert.match(css, /\.assistant-call-button\{[^}]*grid-column:1/);
-  assert.match(css, /\.assistant-menu-button\{[^}]*grid-column:3/);
+  assert.match(css, /\.assistant-chat-topbar\{[^}]*position:fixed/);
+  assert.match(css, /\.assistant-call-button\{[^}]*position:absolute[^}]*left:0/);
+  assert.match(css, /#assistant-menu\{[^}]*position:absolute[^}]*right:0/);
+  assert.match(worker, /yuan-assistant-v42-call-left/);
+  assert.match(worker, /"\.\/js\/realtime-call\.js"/);
 });
