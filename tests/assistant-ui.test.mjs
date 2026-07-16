@@ -458,3 +458,38 @@ test("assistant sends an uploaded image to chat after file upload succeeds", asy
   assert.match(script, /fileData\.file\.id/);
   assert.match(script, /我发了一张图片，请帮我看看。|鎴戝彂浜嗕竴寮犲浘鐗囷紝璇峰府鎴戠湅鐪嬨€?/);
 });
+
+test("assistant opens a full-screen Qingqing call with subtitles and text mode", async () => {
+  const [html, app, call, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../js/app.js", import.meta.url), "utf8"),
+    readFile(new URL("../js/realtime-call.js", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(html, /id="assistant-call"/);
+  assert.match(html, /id="realtime-call-view"/);
+  assert.match(html, /id="realtime-caption-toggle"/);
+  assert.match(html, /id="realtime-text-toggle"/);
+  assert.match(html, /id="realtime-hangup"/);
+  assert.match(html, /id="realtime-transcript"/);
+  assert.match(app, /initRealtimeCall/);
+  assert.match(call, /getUserMedia/);
+  assert.match(call, /saveRealtimeTranscript/);
+  assert.match(css, /\.realtime-call-view/);
+  assert.match(css, /\.realtime-call-view\.captions/);
+});
+
+test("assistant call button sits on the left side of the chat roof", async () => {
+  const [html, css] = await Promise.all([
+    readFile(new URL("../index.html", import.meta.url), "utf8"),
+    readFile(new URL("../styles.css", import.meta.url), "utf8"),
+  ]);
+
+  const topbar = html.match(/<header class="assistant-chat-topbar">[\s\S]*?<\/header>/)?.[0] || "";
+  assert.match(topbar, /id="assistant-call"[^>]+class="assistant-menu-button assistant-call-button"/);
+  assert.match(topbar, /id="assistant-call"[\s\S]*<h2 id="assistant-title"[\s\S]*id="assistant-menu"/);
+  assert.doesNotMatch(topbar, /assistant-top-actions/);
+  assert.match(css, /\.assistant-call-button\{[^}]*grid-column:1/);
+  assert.match(css, /\.assistant-menu-button\{[^}]*grid-column:3/);
+});

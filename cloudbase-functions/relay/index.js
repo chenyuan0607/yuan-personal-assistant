@@ -8,6 +8,7 @@ import codexHandler from "../../edge-functions/api/codex.js";
 import filesHandler from "../../edge-functions/api/files.js";
 import notificationsHandler from "../../edge-functions/api/notifications.js";
 import workNotificationsHandler from "../../edge-functions/api/work-notifications.js";
+import realtimeHandler from "../../edge-functions/api/realtime.js";
 import { createCloudBaseBlob, createCloudBaseStore } from "./storage.js";
 
 const app = cloudbase.init({ env: process.env.TCB_ENV || cloudbase.SYMBOL_CURRENT_ENV });
@@ -26,6 +27,7 @@ const handlers = new Map([
   ["/api/files", filesHandler],
   ["/api/notifications", notificationsHandler],
   ["/api/work-notifications", workNotificationsHandler],
+  ["/api/realtime", realtimeHandler],
 ]);
 
 const env = new Proxy({}, {

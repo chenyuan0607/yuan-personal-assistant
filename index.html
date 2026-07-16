@@ -121,8 +121,9 @@
     <section id="assistant-view" class="view assistant-view" aria-labelledby="assistant-tab">
       <input id="assistant-avatar-file" type="file" accept="image/*" hidden>
       <header class="assistant-chat-topbar">
+        <button id="assistant-call" class="assistant-menu-button assistant-call-button" type="button" aria-label="开始语音通话">☎</button>
         <h2 id="assistant-title">缘的小助手</h2>
-        <button id="assistant-menu" class="assistant-menu-button" type="button" aria-label="打开助手菜单" title="助手菜单">…</button>
+        <button id="assistant-menu" class="assistant-menu-button" type="button" aria-label="打开助手菜单">…</button>
       </header>
       <p id="assistant-status" class="assistant-status assistant-chat-status" role="status">正在连接…</p>
       <p id="assistant-memory-status" class="assistant-status assistant-meta-status">记忆包：尚未读取</p>
@@ -133,6 +134,7 @@
       <div id="assistant-sticker-panel" class="assistant-sticker-panel" hidden></div>
       <form id="assistant-form" class="assistant-composer"><label class="sr-only" for="assistant-input">给助手发送消息</label><textarea id="assistant-input" rows="2" maxlength="8000" placeholder="和助手说点什么…" required></textarea><button id="assistant-stickers" class="composer-icon" type="button" aria-label="表情包" title="表情包">☺</button><label id="assistant-upload" class="composer-icon" for="assistant-file" role="button" aria-label="上传文件" title="上传文件">+</label><button class="primary" type="submit">发送</button></form>
     </section>
+    <section id="realtime-call-view" class="view realtime-call-view" hidden><header><span>00:00</span><button id="realtime-caption-toggle" type="button">👁</button></header><div class="realtime-stage"><img src="./icons/icon-192.png" alt="青青"><h2>青青</h2><p id="realtime-current">正在连接…</p><div id="realtime-transcript"></div></div><p id="realtime-call-status"></p><form id="realtime-text-form" hidden><input id="realtime-text-input"><button>发送</button></form><footer><button id="realtime-text-toggle" type="button">✎</button><button id="realtime-hangup" type="button">●</button></footer></section>
 
     <section id="assistant-menu-view" class="view assistant-menu-page" hidden>
       <header class="assistant-info-topbar">

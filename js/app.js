@@ -9,6 +9,7 @@ import { createPomodoroStore } from "./pomodoro-store.js";
 import { initPomodoro } from "./pomodoro-ui.js";
 import { initWeather } from "./weather.js";
 import { initWorkNotifications } from "./work-notifications.js";
+import { initRealtimeCall } from "./realtime-call.js";
 
 const showView = (viewId) => {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== viewId; });
@@ -49,6 +50,7 @@ const flushPendingFeedback = async () => {
 };
 const queueFeedback = async (record) => { pomodoroStore.addResult(record); await flushPendingFeedback(); };
 const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore, onSession: flushPendingFeedback, onMenu: (viewId = "assistant-menu-view") => showView(viewId) });
+initRealtimeCall({ api: feedbackApi, onExit: () => { showView("assistant-view"); assistantRefresh(); } });
 refreshWorkNotifications = initWorkNotifications({ api: feedbackApi });
 if (!document.querySelector("#assistant-view")?.hidden) await assistantRefresh();
 pomodoro = initPomodoro({

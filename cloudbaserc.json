@@ -14,7 +14,9 @@
         "RELAY_COLLECTION": "yuan_relay_records",
         "ALLOWED_ORIGINS": "https://yuan-personal-assistant.edgeone.dev,https://chenyuan0607.github.io,https://yuan-assistant-test-d2bd198841e7-1453821016.tcloudbaseapp.com,http://127.0.0.1:4173,http://localhost:4173",
         "MODEL_ENDPOINT": "https://api.deepseek.com/chat/completions",
-        "MODEL_NAME": "deepseek-chat"
+        "MODEL_NAME": "deepseek-chat",
+        "REALTIME_PROXY_WS_URL": "ws://omni-realtime.fcv3.1418484155149800.cn-hangzhou.fc.devsapp.net/ws",
+        "REALTIME_VOICE": "Cherry"
       }
     }
   ]
