@@ -16,6 +16,19 @@ const showView = (viewId) => {
   document.querySelectorAll(".view").forEach((view) => { view.hidden = view.id !== viewId; });
 };
 
+const assistantRecoveryMarker = "recover=assistant";
+const isAssistantRecoveryLaunch = () => (
+  location.search.includes(assistantRecoveryMarker)
+  || location.hash === "#assistant"
+);
+
+const forceAssistantView = () => {
+  showView("assistant-view");
+  document.querySelector("#realtime-call-view")?.setAttribute("hidden", "");
+  document.querySelectorAll(".bottom-nav button").forEach((button) => button.classList.remove("active"));
+  document.querySelector("#assistant-tab")?.classList.add("active");
+};
+
 document.querySelectorAll(".bottom-nav button").forEach((button) => button.addEventListener("click", () => {
   showView(button.dataset.view);
   document.querySelectorAll(".bottom-nav button").forEach((item) => item.classList.toggle("active", item === button));
@@ -53,7 +66,11 @@ const queueFeedback = async (record) => { pomodoroStore.addResult(record); await
 const assistantRefresh = initAssistant({ baseUrl: assistantBaseUrl, store: assistantStore, onSession: flushPendingFeedback, onMenu: (viewId = "assistant-menu-view") => showView(viewId) });
 initRealtimeCall({ api: feedbackApi, onExit: () => { showView("assistant-view"); assistantRefresh(); } });
 refreshWorkNotifications = initWorkNotifications({ api: feedbackApi });
+if (isAssistantRecoveryLaunch()) forceAssistantView();
 if (!document.querySelector("#assistant-view")?.hidden) await assistantRefresh();
+window.addEventListener("pageshow", () => {
+  if (isAssistantRecoveryLaunch()) forceAssistantView();
+});
 pomodoro = initPomodoro({
   store: pomodoroStore,
   getDeviceName: assistantStore.deviceName,

@@ -20,7 +20,7 @@
     <h1>正在退出卡住的通话页</h1>
     <p id="status">我会清掉旧网页缓存，然后带你回到青青助手。</p>
     <button id="reset-button" type="button">手动再试一次</button>
-    <a href="./#assistant">直接回到助手</a>
+    <a href="./?recover=assistant#assistant">直接回到助手</a>
     <small>这不会删除你的云端聊天记录，只是清理这个网页在浏览器里的旧缓存。</small>
   </main>
   <script>
@@ -38,7 +38,7 @@
           await Promise.all(keys.map((key) => caches.delete(key)));
         }
         status.textContent = "完成，正在返回青青助手…";
-        setTimeout(() => location.replace("./#assistant"), 500);
+        setTimeout(() => location.replace("./?recover=assistant#assistant"), 500);
       } catch (error) {
         status.textContent = "自动清理失败了，请关闭当前标签页后重新打开网页。";
       }

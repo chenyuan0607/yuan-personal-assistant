@@ -22,6 +22,14 @@ test("navigation opens assistant by default and orders today, assistant, ledger,
   assert.match(appScript, /await assistantRefresh\(\)/);
 });
 
+test("recovery launch forces the assistant chat instead of the realtime call", () => {
+  assert.match(appScript, /recover=assistant/);
+  assert.match(appScript, /location\.hash === "#assistant"/);
+  assert.match(appScript, /showView\("assistant-view"\)/);
+  assert.match(appScript, /#assistant-tab/);
+  assert.match(appScript, /#realtime-call-view/);
+});
+
 test("top bar and temporary transfer are removed", () => {
   assert.doesNotMatch(html, /class="topbar"|assistant-transfer|临时中转资料/);
 });
@@ -75,5 +83,5 @@ test("emergency reset page clears stuck PWA state", async () => {
   assert.match(reset, /registration\.unregister\(\)/);
   assert.match(reset, /caches\.keys\(\)/);
   assert.match(reset, /caches\.delete\(key\)/);
-  assert.match(reset, /location\.replace\("\.\/#assistant"\)/);
+  assert.match(reset, /location\.replace\("\.\/\?recover=assistant#assistant"\)/);
 });
